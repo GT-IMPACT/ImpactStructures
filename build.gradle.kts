@@ -31,5 +31,5 @@ repositories {
 }
 
 dependencies {
-    compileOnly(fileTree(mapOf("dir" to "libs/", "include" to listOf("*.jar"))))
+    compileOnlyApi("space.impact:gregtech-impact:5.09.35.32:dev") { isTransitive = false }
 }
