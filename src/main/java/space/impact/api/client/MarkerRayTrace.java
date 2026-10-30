@@ -1,8 +1,18 @@
 package space.impact.api.client;
 
+import space.impact.api.hint.HintMarkerKind;
+
 /** Geometric picking shared by marker rendering and tests; no Minecraft initialization is needed. */
 public final class MarkerRayTrace {
     private MarkerRayTrace() {}
+
+    public static double hintIntersection(double ox, double oy, double oz, double dx, double dy, double dz,
+            int x, int y, int z, HintMarkerKind kind, double range) {
+        double inset = HintRenderStyle.cubeInset(kind);
+        double size = HintRenderStyle.cubeSize(kind);
+        return intersection(ox, oy, oz, dx, dy, dz, x + inset, y + inset, z + inset,
+                x + inset + size, y + inset + size, z + inset + size, range);
+    }
 
     public static double blockIntersection(double ox, double oy, double oz, double dx, double dy, double dz,
             int x, int y, int z, double range) {

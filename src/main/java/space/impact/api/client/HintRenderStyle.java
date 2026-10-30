@@ -10,6 +10,15 @@ public final class HintRenderStyle {
 
     private HintRenderStyle() {}
 
+    public static double cubeSize(HintMarkerKind kind) {
+        if (kind == HintMarkerKind.ERROR) return BLOCK_SIZE;
+        return kind == null ? 0.5 : 0.9;
+    }
+
+    public static double cubeInset(HintMarkerKind kind) {
+        return (BLOCK_SIZE - cubeSize(kind)) / 2;
+    }
+
     public static int markerColor(HintMarkerKind kind) {
         switch (kind) {
             case ERROR: return 0xFF4545;

@@ -468,15 +468,18 @@ public class ClientProxy extends CommonProxy {
         }
 
         public boolean isInFrustrum(Frustrum frustrum) {
+            double inset = HintRenderStyle.cubeInset(markerKind);
+            double size = HintRenderStyle.cubeSize(markerKind);
             double margin = HintRenderStyle.FRAME_MARGIN;
-            return frustrum.isBoxInFrustum(x - margin, y - margin, z - margin,
-                    x + HintRenderStyle.BLOCK_SIZE + margin, y + HintRenderStyle.BLOCK_SIZE + margin,
-                    z + HintRenderStyle.BLOCK_SIZE + margin);
+            return frustrum.isBoxInFrustum(x + inset - margin, y + inset - margin, z + inset - margin,
+                    x + inset + size + margin, y + inset + size + margin, z + inset + size + margin);
         }
 
         public void draw(Tessellator tes, double eyeX, double eyeY, double eyeZ, int eyeXint, int eyeYint,
                 int eyeZint, boolean markerFill) {
-            double size = HintRenderStyle.BLOCK_SIZE;
+            HintMarkerKind geometryKind = markerFill ? markerKind : null;
+            double size = HintRenderStyle.cubeSize(geometryKind);
+            double inset = HintRenderStyle.cubeInset(geometryKind);
 
             int brightness = w.blockExists(x, 0, z) ? w.getLightBrightnessForSkyBlocks(x, y, z, 0) : 0;
             tes.setBrightness(markerFill ? 0x00F000F0 : brightness);
@@ -490,12 +493,12 @@ public class ClientProxy extends CommonProxy {
                 tes.setColorRGBA((int) (tint[0] * .9F), (int) (tint[1] * .95F), tint[2], opacity);
             }
 
-            double X = x - eyeXint;
-            double Y = y - eyeYint;
-            double Z = z - eyeZint;
-            double worldX = x;
-            double worldY = y;
-            double worldZ = z;
+            double X = x - eyeXint + inset;
+            double Y = y - eyeYint + inset;
+            double Z = z - eyeZint + inset;
+            double worldX = x + inset;
+            double worldY = y + inset;
+            double worldZ = z + inset;
 
             // cube is a very special model. its facings can be rendered correctly by viewer distance without using
             // surface normals and view vector
@@ -729,8 +732,8 @@ public class ClientProxy extends CommonProxy {
             HintParticleInfo selected = null;
             for (HintParticleInfo hint : allHintsForRender) {
                 if (hint.w != mc.theWorld || !hint.textured && hint.markerKind == null) continue;
-                double distance = MarkerRayTrace.blockIntersection(eyeX, eyeY, eyeZ,
-                        look.xCoord, look.yCoord, look.zCoord, hint.x, hint.y, hint.z, 64);
+                double distance = MarkerRayTrace.hintIntersection(eyeX, eyeY, eyeZ,
+                        look.xCoord, look.yCoord, look.zCoord, hint.x, hint.y, hint.z, hint.markerKind, 64);
                 if (!hint.rendersThroughBlocks() && distance > obstructionDistance + 0.01) continue;
                 if (distance < nearest) {
                     nearest = distance;
@@ -862,7 +865,7 @@ public class ClientProxy extends CommonProxy {
                     int color = pass == 0 ? 0x141414 : HintRenderStyle.markerColor(hint.markerKind);
                     tes.setBrightness(0x00F000F0);
                     tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255, 230);
-                    drawFrame(tes, hint.x - cameraX, hint.y - cameraY, hint.z - cameraZ);
+                    drawFrame(tes, hint.x - cameraX, hint.y - cameraY, hint.z - cameraZ, hint.markerKind);
                 }
                 if (drawing) tes.draw();
             }
@@ -870,13 +873,15 @@ public class ClientProxy extends CommonProxy {
             GL11.glPopMatrix();
         }
 
-        private static void drawFrame(Tessellator tes, int x, int y, int z) {
-            double minX = x - HintRenderStyle.FRAME_MARGIN;
-            double minY = y - HintRenderStyle.FRAME_MARGIN;
-            double minZ = z - HintRenderStyle.FRAME_MARGIN;
-            double maxX = x + HintRenderStyle.BLOCK_SIZE + HintRenderStyle.FRAME_MARGIN;
-            double maxY = y + HintRenderStyle.BLOCK_SIZE + HintRenderStyle.FRAME_MARGIN;
-            double maxZ = z + HintRenderStyle.BLOCK_SIZE + HintRenderStyle.FRAME_MARGIN;
+        private static void drawFrame(Tessellator tes, int x, int y, int z, HintMarkerKind kind) {
+            double inset = HintRenderStyle.cubeInset(kind);
+            double size = HintRenderStyle.cubeSize(kind);
+            double minX = x + inset - HintRenderStyle.FRAME_MARGIN;
+            double minY = y + inset - HintRenderStyle.FRAME_MARGIN;
+            double minZ = z + inset - HintRenderStyle.FRAME_MARGIN;
+            double maxX = x + inset + size + HintRenderStyle.FRAME_MARGIN;
+            double maxY = y + inset + size + HintRenderStyle.FRAME_MARGIN;
+            double maxZ = z + inset + size + HintRenderStyle.FRAME_MARGIN;
             for (int corner = 0; corner < 8; corner++) {
                 double cx = (corner & 1) == 0 ? minX : maxX;
                 double cy = (corner & 2) == 0 ? minY : maxY;

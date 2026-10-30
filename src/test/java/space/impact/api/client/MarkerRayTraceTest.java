@@ -1,5 +1,7 @@
 package space.impact.api.client;
 
+import space.impact.api.hint.HintMarkerKind;
+
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -45,5 +47,29 @@ class MarkerRayTraceTest {
 
     private static double hit(double ox, double oy, double oz, double dx, double dy, double dz, int z, double range) {
         return MarkerRayTrace.blockIntersection(ox, oy, oz, dx, dy, dz, 0, 0, z, range);
+    }
+
+    @Test
+    void ordinaryHintsUseTheOriginalCenteredHalfBlockBounds() {
+        assertEquals(2.25, MarkerRayTrace.hintIntersection(0.5, 0.5, -2, 0, 0, 1, 0, 0, 0, null, 64), 1e-9);
+        assertEquals(Double.POSITIVE_INFINITY,
+                MarkerRayTrace.hintIntersection(0.1, 0.5, -2, 0, 0, 1, 0, 0, 0, null, 64));
+        assertEquals(2.25,
+                MarkerRayTrace.hintIntersection(-2.5, -3.5, -7, 0, 0, 1, -3, -4, -5, null, 64), 1e-9);
+    }
+
+    @Test
+    void onlyErrorMarkersOccupyTheEntireBlock() {
+        for (HintMarkerKind kind : HintMarkerKind.values()) {
+            double centerHit = MarkerRayTrace.hintIntersection(0.5, 0.5, -2, 0, 0, 1, 0, 0, 0, kind, 64);
+            double edgeHit = MarkerRayTrace.hintIntersection(0.01, 0.5, -2, 0, 0, 1, 0, 0, 0, kind, 64);
+            if (kind == HintMarkerKind.ERROR) {
+                assertEquals(2, centerHit, 1e-9);
+                assertEquals(2, edgeHit, 1e-9);
+            } else {
+                assertEquals(2.05, centerHit, 1e-9);
+                assertEquals(Double.POSITIVE_INFINITY, edgeHit);
+            }
+        }
     }
 }
