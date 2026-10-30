@@ -33,7 +33,6 @@ import net.minecraft.profiler.Profiler;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.IChatComponent;
 import net.minecraft.util.IIcon;
-import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.MouseEvent;
@@ -726,8 +725,7 @@ public class ClientProxy extends CommonProxy {
             double eyeX = from.xCoord, eyeY = from.yCoord, eyeZ = from.zCoord;
             Vec3 look = view.getLook(e.partialTicks);
             Vec3 to = from.addVector(look.xCoord * 64, look.yCoord * 64, look.zCoord * 64);
-            MovingObjectPosition obstruction = mc.theWorld.func_147447_a(from, to, false, true, false);
-            double obstructionDistance = obstruction == null ? Double.POSITIVE_INFINITY : from.distanceTo(obstruction.hitVec);
+            double obstructionDistance = MarkerRayTrace.obstructionDistance(mc.theWorld, from, to);
             double nearest = Double.POSITIVE_INFINITY;
             HintParticleInfo selected = null;
             for (HintParticleInfo hint : allHintsForRender) {

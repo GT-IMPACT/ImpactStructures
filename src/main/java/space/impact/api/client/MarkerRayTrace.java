@@ -1,10 +1,24 @@
 package space.impact.api.client;
 
+import net.minecraft.util.MovingObjectPosition;
+import net.minecraft.util.Vec3;
+import net.minecraft.world.World;
+
 import space.impact.api.hint.HintMarkerKind;
 
-/** Geometric picking shared by marker rendering and tests; no Minecraft initialization is needed. */
+/** Ray picking and world obstruction checks used by hologram labels. */
 public final class MarkerRayTrace {
     private MarkerRayTrace() {}
+
+    public static double obstructionDistance(World world, Vec3 from, Vec3 to) {
+        // World ray tracing mutates 'from' as it traverses cells. Keep the original eye coordinates.
+        double eyeX = from.xCoord;
+        double eyeY = from.yCoord;
+        double eyeZ = from.zCoord;
+        MovingObjectPosition obstruction = world.func_147447_a(from, to, false, true, false);
+        return obstruction == null ? Double.POSITIVE_INFINITY
+                : Math.sqrt(obstruction.hitVec.squareDistanceTo(eyeX, eyeY, eyeZ));
+    }
 
     public static double hintIntersection(double ox, double oy, double oz, double dx, double dy, double dz,
             int x, int y, int z, HintMarkerKind kind, double range) {
