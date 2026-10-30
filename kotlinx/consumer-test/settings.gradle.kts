@@ -12,7 +12,7 @@ plugins {
     id("settings-setup")
 }
 
-rootProject.name = "ImpactAPI-KotlinX-ConsumerTest"
+rootProject.name = "ImpactStructures-Ktx-ConsumerTest"
 
 dependencyResolutionManagement {
     versionCatalogs {

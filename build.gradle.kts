@@ -1,3 +1,5 @@
+import org.gradle.api.publish.maven.MavenPublication
+
 plugins {
     id("minecraft-setup")
     id("publish-setup")
@@ -8,6 +10,7 @@ impactMod {
     modName.set("Impact Structures")
     modGroup.set("space.impact")
     mavenGroup.set("space.impact")
+    artifactId.set("ImpactStructures")
     mavenUrl.set("https://maven.accident.space/repository/maven-releases/")
     usesMixins.set(true)
     coreModClass.set("api.mixinplugin.ImpactEarlyMixins")
@@ -48,11 +51,18 @@ tasks.test {
 }
 
 tasks.named("check") {
-    dependsOn(":ImpactAPI-KotlinX:check")
+    dependsOn(":ImpactStructures-Ktx:check")
 }
 
 tasks.named("build") {
-    dependsOn(":ImpactAPI-KotlinX:build")
+    dependsOn(":ImpactStructures-Ktx:build")
+}
+
+// Publication coordinates must match project names for local reobfuscation.
+afterEvaluate {
+    publishing.publications.named<MavenPublication>("maven") {
+        artifactId = impactMod.artifactId.get()
+    }
 }
 
 publishing.repositories.maven {
@@ -72,7 +82,7 @@ tasks.register<Exec>("verifyKotlinXConsumer") {
     description = "Tests the independently published KotlinX dev and reobf variants."
     dependsOn(
         ":publishMavenPublicationToConsumerTestRepository",
-        ":ImpactAPI-KotlinX:publishMavenPublicationToConsumerTestRepository",
+        ":ImpactStructures-Ktx:publishMavenPublicationToConsumerTestRepository",
         prepareKotlinXConsumerBuildLogic,
     )
     doFirst {

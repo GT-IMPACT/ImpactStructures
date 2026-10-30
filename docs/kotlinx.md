@@ -1,6 +1,6 @@
 # KotlinX: структуры на Kotlin
 
-`ImpactAPI-Ktx` — отдельный Kotlin-фасад над Java API Impact Structures. Он создаёт обычные
+`ImpactStructures-Ktx` — отдельный Kotlin-фасад над Java API Impact Structures. Он создаёт обычные
 `IStructureDefinition`/`IStructureElement` и использует тот же обход, survival-строительство, каналы и голограммы.
 Существующий Java API остаётся доступен напрямую.
 
@@ -23,13 +23,13 @@ repositories {
 }
 
 dependencies {
-    implementation("space.impact:ImpactAPI-Ktx:$impactVersion")
+    implementation("space.impact:ImpactStructures-Ktx:$impactVersion")
 }
 ```
 
-Ядро `space.impact:ImpactAPI` приходит через API-зависимость KotlinX. При использовании Gradle Module Metadata
+Ядро `space.impact:ImpactStructures` приходит через API-зависимость KotlinX. При использовании Gradle Module Metadata
 варианты выбираются средствами Gradle/RFG. Для старого потребителя, читающего только POM, dev-артефакт доступен
-с classifier `dev`: `space.impact:ImpactAPI-Ktx:<version>:dev`.
+с classifier `dev`: `space.impact:ImpactStructures-Ktx:<version>:dev`.
 
 Runtime предоставляет **Forgelin 2.1.3** через зависимость KotlinX. Java-ядро от него не зависит. Отдельные `kotlin-stdlib`, `kotlin-reflect`
 или coroutines для KotlinX добавлять не требуется. Это библиотека без отдельного mod-bootstrap;

@@ -12,7 +12,7 @@ impactMod {
     modName.set("Impact Structures Ktx")
     modGroup.set("space.impact.api.kotlinx")
     mavenGroup.set("space.impact")
-    artifactId.set("ImpactAPI-Ktx")
+    artifactId.set("ImpactStructures-Ktx")
     mavenUrl.set("https://maven.accident.space/repository/maven-releases/")
     usesMixins.set(false)
     coreModClass.set("")
@@ -49,7 +49,7 @@ tasks.test {
 // The root's legacy ARTIFACT_ID override must not turn this publication into its parent.
 afterEvaluate {
     publishing.publications.named<MavenPublication>("maven") {
-        artifactId = "ImpactAPI-Ktx"
+        artifactId = impactMod.artifactId.get()
     }
 }
 

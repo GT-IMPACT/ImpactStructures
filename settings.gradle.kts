@@ -14,10 +14,10 @@ plugins {
     id("settings-setup")
 }
 
-rootProject.name = "ImpactAPI"
+rootProject.name = "ImpactStructures"
 
-include(":ImpactAPI-KotlinX")
-project(":ImpactAPI-KotlinX").projectDir = file("kotlinx")
+include(":ImpactStructures-Ktx")
+project(":ImpactStructures-Ktx").projectDir = file("kotlinx")
 
 dependencyResolutionManagement {
     versionCatalogs {

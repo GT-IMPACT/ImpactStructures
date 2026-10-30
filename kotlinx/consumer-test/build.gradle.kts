@@ -25,14 +25,14 @@ repositories {
             }
         }
         filter {
-            includeModule("space.impact", "ImpactAPI")
-            includeModule("space.impact", "ImpactAPI-KotlinX")
+            includeModule("space.impact", "ImpactStructures")
+            includeModule("space.impact", "ImpactStructures-Ktx")
         }
     }
 }
 
 dependencies {
-    implementation("space.impact:ImpactAPI-KotlinX:${providers.gradleProperty("impactVersion").get()}")
+    implementation("space.impact:ImpactStructures-Ktx:${providers.gradleProperty("impactVersion").get()}")
     testImplementation(platform("org.junit:junit-bom:5.9.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -51,7 +51,7 @@ val verifyPublishedDependencies by tasks.registering {
     doLast {
         val development = configurations.getByName("compileClasspath").resolvedConfiguration.resolvedArtifacts
         val production = configurations.getByName("reobfJarConfiguration").resolvedConfiguration.resolvedArtifacts
-        val expected = setOf("ImpactAPI", "ImpactAPI-KotlinX")
+        val expected = setOf("ImpactStructures", "ImpactStructures-Ktx")
         val devLibraries = development.filter { it.moduleVersion.id.name in expected }
         val productionLibraries = production.filter { it.moduleVersion.id.name in expected }
         check(devLibraries.map { it.moduleVersion.id.name }.toSet() == expected)

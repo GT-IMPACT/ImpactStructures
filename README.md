@@ -11,8 +11,8 @@
 
 | Модуль | Maven-координаты |
 | --- | --- |
-| Java API | `space.impact:ImpactAPI:<version>` |
-| KotlinX | `space.impact:ImpactAPI-Ktx:<version>` |
+| Java API | `space.impact:ImpactStructures:<version>` |
+| KotlinX | `space.impact:ImpactStructures-Ktx:<version>` |
 
 KotlinX добавляет Kotlin DSL и extensions поверх Java API. Версии обоих артефактов
 должны совпадать. [Подключение и примеры](docs/kotlinx.md).
