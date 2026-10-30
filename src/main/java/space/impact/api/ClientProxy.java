@@ -230,13 +230,17 @@ public class ClientProxy extends CommonProxy {
     @Override
     public boolean markHintParticleError(EntityPlayer player, World w, int x, int y, int z) {
         if (player instanceof EntityPlayerMP) return super.markHintParticleError(player, w, x, y, z);
-        if (player != getCurrentPlayer()) return false; // how?
-        HintParticleInfo hint = getHintParticleInfo(w, x, y, z);
-        if (hint == null) {
-            return false;
+        if (player == null || player != getCurrentPlayer() || w == null || !w.isRemote
+                || w != Minecraft.getMinecraft().theWorld) return false;
+        // Error packets can arrive after endHinting; keep added markers in the existing hologram.
+        boolean reuseGroup = currentHints == null && !allGroups.isEmpty();
+        if (reuseGroup) currentHints = allGroups.get(allGroups.size() - 1);
+        try {
+            hintMarker(w, x, y, z, HintMarkerKind.ERROR);
+            return true;
+        } finally {
+            if (reuseGroup) currentHints = null;
         }
-        hint.markerKind = HintMarkerKind.ERROR;
-        return true;
     }
 
     @Override

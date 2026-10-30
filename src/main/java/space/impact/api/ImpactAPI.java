@@ -179,12 +179,13 @@ public class ImpactAPI {
 
     /**
      * Add a translucent red error cube and outline without changing the hint's icons or color.
-     * Do nothing if the hint is not found.
+     * Create an ERROR marker at the given position if no hint exists there.
      * <p>
      * Can be called on either client side or server side. Server side will schedule a network message to update it for
-     * this player only. Will do nothing if no hint particle is found at given location.
+     * this player only.
      *
-     * @return false if nothing updated. true if updated or update instruction sent.
+     * @return true if a hint was updated, a marker was created, or an update instruction was sent;
+     *         false if the player or world is not applicable.
      */
     public static boolean markHintParticleError(EntityPlayer player, World w, int x, int y, int z) {
         return proxy.markHintParticleError(player, w, x, y, z);
