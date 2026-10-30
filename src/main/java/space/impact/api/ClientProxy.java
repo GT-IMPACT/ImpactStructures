@@ -9,15 +9,15 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityClientPlayerMP;
-import net.minecraft.client.gui.GuiNewChat;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.GuiNewChat;
 import net.minecraft.client.particle.EntityFX;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.culling.Frustrum;
@@ -27,6 +27,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.profiler.Profiler;
 import net.minecraft.util.ChatComponentText;
@@ -36,8 +37,8 @@ import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.MouseEvent;
-import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.ConfigElement;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
@@ -46,12 +47,13 @@ import net.minecraftforge.event.world.WorldEvent;
 import org.apache.commons.lang3.tuple.Pair;
 import org.lwjgl.opengl.GL11;
 
+import space.impact.api.client.HintRenderStyle;
+import space.impact.api.client.MarkerRayTrace;
 import space.impact.api.entity.fx.WeightlessParticleFX;
+import space.impact.api.hint.HintMarkerKind;
 import space.impact.api.item.ItemConstructableTrigger;
 import space.impact.api.net.RegistryOrderSyncMessage;
 import space.impact.api.net.SetChannelDataMessage;
-import space.impact.api.hint.HintMarkerKind;
-import space.impact.api.client.MarkerRayTrace;
 
 import cpw.mods.fml.client.config.GuiConfig;
 import cpw.mods.fml.client.event.ConfigChangedEvent;
@@ -98,10 +100,6 @@ public class ClientProxy extends CommonProxy {
      */
     private static boolean allHintsDirty = false;
     /**
-     * counter keeping track of how many renderThrough hint particle we have. enable optimization if no renderThrough
-     */
-    private static int renderThrough;
-    /**
      * A throttle map for local player. Integrated server will use the throttle map in super class instead.
      */
     private static final Map<Object, Long> localThrottleMap = new HashMap<>();
@@ -112,7 +110,6 @@ public class ClientProxy extends CommonProxy {
         allHintsForRender.clear();
         currentHints = null;
         allHintsDirty = false;
-        renderThrough = 0;
         lastPlayerPos.yCoord = -1e30;
         localThrottleMap.clear();
     }
@@ -129,6 +126,7 @@ public class ClientProxy extends CommonProxy {
 
     @Override
     public void hintMarker(World w, int x, int y, int z, HintMarkerKind kind) {
+        if (w == null) return;
         if (!w.isRemote) {
             super.hintMarker(w, x, y, z, kind);
             return;
@@ -137,30 +135,30 @@ public class ClientProxy extends CommonProxy {
         HintParticleInfo existing = getHintParticleInfo(w, x, y, z);
         if (existing != null) {
             existing.markerKind = kind;
-            if (kind == HintMarkerKind.ERROR) existing.setRenderThrough();
             return;
         }
         hintParticleTinted(w, x, y, z, new IIcon[6], RGBA_NO_TINT);
         HintParticleInfo created = getHintParticleInfo(w, x, y, z);
         if (created != null) {
             created.markerKind = kind;
-            if (kind == HintMarkerKind.ERROR) created.setRenderThrough();
         }
     }
 
     @Override
     public void hintParticleTinted(World w, int x, int y, int z, IIcon[] icons, short[] RGBa) {
+        addHint(w, x, y, z, icons, RGBa, null, 0);
+    }
+
+    private void addHint(World w, int x, int y, int z, IIcon[] icons, short[] RGBa, Block block, int metadata) {
         if (w == null || !w.isRemote || w != Minecraft.getMinecraft().theWorld) return;
         if (icons == null || icons.length != 6 || RGBa == null || RGBa.length != 4)
             throw new IllegalArgumentException("A hint needs six face icons and four tint components");
         ensureHinting();
-        HintParticleInfo info = new HintParticleInfo(w, x, y, z, icons, RGBa);
+        HintParticleInfo info = new HintParticleInfo(w, x, y, z, icons, RGBa, block, metadata);
         HintParticleInfo samePosition = getHintParticleInfo(w, x, y, z);
         if (samePosition != null && allHints.get(samePosition) == currentHints) {
             info.markerKind = samePosition.markerKind;
-            if (samePosition.renderThrough) renderThrough--;
             currentHints.getHints().remove(samePosition);
-            if (samePosition.renderThrough) info.setRenderThrough();
         }
 
         // check and remove colliding holograms
@@ -175,9 +173,7 @@ public class ClientProxy extends CommonProxy {
         currentHints.getHints().add(info);
         allHintsDirty = true;
 
-        boolean textured = false;
-        for (IIcon icon : icons) if (icon != null) { textured = true; break; }
-        if (!textured) return;
+        if (!info.textured) return;
         EntityFX particle = new WeightlessParticleFX(
                 w,
                 x + RANDOM.nextFloat() * 0.5F,
@@ -192,7 +188,8 @@ public class ClientProxy extends CommonProxy {
 
     @Override
     public void hintParticleTinted(World w, int x, int y, int z, Block block, int meta, short[] RGBa) {
-        hintParticleTinted(w, x, y, z, createIIconFromBlock(block, meta), RGBa);
+        if (w == null || !w.isRemote || w != Minecraft.getMinecraft().theWorld) return;
+        addHint(w, x, y, z, createIIconFromBlock(block, meta), RGBa, block, meta);
     }
 
     @Override
@@ -202,7 +199,7 @@ public class ClientProxy extends CommonProxy {
 
     @Override
     public void hintParticle(World w, int x, int y, int z, Block block, int meta) {
-        hintParticleTinted(w, x, y, z, createIIconFromBlock(block, meta), RGBA_NO_TINT);
+        hintParticleTinted(w, x, y, z, block, meta, RGBA_NO_TINT);
     }
 
     @Override
@@ -239,7 +236,6 @@ public class ClientProxy extends CommonProxy {
             return false;
         }
         hint.markerKind = HintMarkerKind.ERROR;
-        hint.setRenderThrough();
         return true;
     }
 
@@ -255,7 +251,6 @@ public class ClientProxy extends CommonProxy {
     static void removeGroup(HintGroup group) {
         for (HintParticleInfo hintParticleInfo : group.getHints()) {
             allHints.remove(hintParticleInfo, group);
-            if (hintParticleInfo.renderThrough) renderThrough--;
         }
         allHintsDirty = true;
     }
@@ -396,19 +391,33 @@ public class ClientProxy extends CommonProxy {
         // these are the block coordinate for e.g. w.getBlock()
         private final int x, y, z;
         private final IIcon[] icons;
+        private final boolean textured;
+        private final Block block;
+        private final int metadata;
+        private ItemStack displayStack;
         private short[] tint;
-        private boolean renderThrough;
         private HintMarkerKind markerKind;
 
         private final long creationTime = System.currentTimeMillis(); // use tick time instead maybe
 
         public HintParticleInfo(World w, int x, int y, int z, IIcon[] icons, short[] tint) {
+            this(w, x, y, z, icons, tint, null, 0);
+        }
+
+        public HintParticleInfo(World w, int x, int y, int z, IIcon[] icons, short[] tint, Block block, int metadata) {
             this.w = w;
             this.x = x;
             this.y = y;
             this.z = z;
             this.icons = icons == null ? null : icons.clone();
             this.tint = tint == null ? null : tint.clone();
+            this.block = block;
+            this.metadata = metadata;
+            boolean hasTexture = false;
+            if (icons != null) {
+                for (IIcon icon : icons) if (icon != null) { hasTexture = true; break; }
+            }
+            this.textured = hasTexture;
         }
 
         @Override
@@ -424,12 +433,25 @@ public class ClientProxy extends CommonProxy {
             this.tint = tint.clone();
         }
 
-        public void setRenderThrough() {
-            if (!this.renderThrough) {
-                ClientProxy.renderThrough += 1;
-                allHintsDirty = true;
+        public boolean rendersThroughBlocks() {
+            return HintRenderStyle.rendersThroughBlocks(markerKind);
+        }
+
+        public String getDisplayName() {
+            if (markerKind != null && (markerKind != HintMarkerKind.ERROR || !textured)) {
+                return I18n.format(markerKind.getTranslationKey());
             }
-            this.renderThrough = true;
+            String name;
+            if (block != null) {
+                if (displayStack == null) {
+                    Item item = Item.getItemFromBlock(block);
+                    if (item != null) displayStack = new ItemStack(item, 1, metadata);
+                }
+                name = displayStack == null ? block.getLocalizedName() : displayStack.getDisplayName();
+            } else {
+                name = I18n.format("impactapi.hint.unnamed");
+            }
+            return markerKind == HintMarkerKind.ERROR ? I18n.format("impactapi.hint.error", name) : name;
         }
 
         @Override
@@ -442,28 +464,34 @@ public class ClientProxy extends CommonProxy {
         }
 
         public boolean isInFrustrum(Frustrum frustrum) {
-            return frustrum.isBoxInFrustum(x, y, z, x + 1, y + 1, z + 1);
+            double margin = HintRenderStyle.FRAME_MARGIN;
+            return frustrum.isBoxInFrustum(x - margin, y - margin, z - margin,
+                    x + HintRenderStyle.BLOCK_SIZE + margin, y + HintRenderStyle.BLOCK_SIZE + margin,
+                    z + HintRenderStyle.BLOCK_SIZE + margin);
         }
 
         public void draw(Tessellator tes, double eyeX, double eyeY, double eyeZ, int eyeXint, int eyeYint,
-                int eyeZint) {
-            double size = 0.5;
+                int eyeZint, boolean markerFill) {
+            double size = HintRenderStyle.BLOCK_SIZE;
 
             int brightness = w.blockExists(x, 0, z) ? w.getLightBrightnessForSkyBlocks(x, y, z, 0) : 0;
-            tes.setBrightness(brightness);
+            tes.setBrightness(markerFill ? 0x00F000F0 : brightness);
 
-            tes.setColorRGBA(
-                    (int) (tint[0] * .9F),
-                    (int) (tint[1] * .95F),
-                    (int) (tint[2] * 1F),
-                    ConfigurationHandler.INSTANCE.getHintTransparency());
+            int opacity = ConfigurationHandler.INSTANCE.getHintTransparency();
+            if (markerFill) {
+                int color = HintRenderStyle.markerColor(markerKind);
+                tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255,
+                        HintRenderStyle.markerOpacity(opacity));
+            } else {
+                tes.setColorRGBA((int) (tint[0] * .9F), (int) (tint[1] * .95F), tint[2], opacity);
+            }
 
-            double X = (x - eyeXint) + 0.25;
-            double Y = (y - eyeYint) + 0.25;
-            double Z = (z - eyeZint) + 0.25;
-            double worldX = x + 0.25;
-            double worldY = y + 0.25;
-            double worldZ = z + 0.25;
+            double X = x - eyeXint;
+            double Y = y - eyeYint;
+            double Z = z - eyeZint;
+            double worldX = x;
+            double worldY = y;
+            double worldZ = z;
 
             // cube is a very special model. its facings can be rendered correctly by viewer distance without using
             // surface normals and view vector
@@ -473,14 +501,13 @@ public class ClientProxy extends CommonProxy {
             for (int j = 0; j < 2; j++) {
                 boolean unobstructedPass = j == 1;
                 for (int i = 0; i < 6; i++) {
-                    if (icons[i] == null) continue;
+                    if (!markerFill && icons[i] == null) continue;
+                    if (!markerFill) markTextureUsed(icons[i]);
 
-                    markTextureUsed(icons[i]);
-
-                    double u = icons[i].getMinU();
-                    double U = icons[i].getMaxU();
-                    double v = icons[i].getMinV();
-                    double V = icons[i].getMaxV();
+                    double u = markerFill ? 0 : icons[i].getMinU();
+                    double U = markerFill ? 1 : icons[i].getMaxU();
+                    double v = markerFill ? 0 : icons[i].getMinV();
+                    double V = markerFill ? 1 : icons[i].getMaxV();
                     switch (i) { // {DOWN, UP, NORTH, SOUTH, WEST, EAST}
                         case 0:
                             // all these ifs is in form if ((is face unobstructed) != (is in unobstructred pass))
@@ -695,32 +722,30 @@ public class ClientProxy extends CommonProxy {
             MovingObjectPosition obstruction = mc.theWorld.func_147447_a(from, to, false, true, false);
             double obstructionDistance = obstruction == null ? Double.POSITIVE_INFINITY : from.distanceTo(obstruction.hitVec);
             double nearest = Double.POSITIVE_INFINITY;
-            HintMarkerKind selected = null;
+            HintParticleInfo selected = null;
             for (HintParticleInfo hint : allHintsForRender) {
-                if (hint.markerKind == null || hint.w != mc.theWorld) continue;
-                double distance = MarkerRayTrace.intersection(eyeX, eyeY, eyeZ, look.xCoord, look.yCoord, look.zCoord,
-                        hint.x + 0.05, hint.y + 0.05, hint.z + 0.05, hint.x + 0.95, hint.y + 0.95, hint.z + 0.95, 64);
-                if (!hint.renderThrough && distance > obstructionDistance + 0.01) continue;
+                if (hint.w != mc.theWorld || !hint.textured && hint.markerKind == null) continue;
+                double distance = MarkerRayTrace.blockIntersection(eyeX, eyeY, eyeZ,
+                        look.xCoord, look.yCoord, look.zCoord, hint.x, hint.y, hint.z, 64);
+                if (!hint.rendersThroughBlocks() && distance > obstructionDistance + 0.01) continue;
                 if (distance < nearest) {
                     nearest = distance;
-                    selected = hint.markerKind;
+                    selected = hint;
                 }
             }
             if (selected == null) return;
-            String label = I18n.format(selected.getTranslationKey());
+            String label = selected.getDisplayName();
             int width = mc.fontRenderer.getStringWidth(label);
             int x = (e.resolution.getScaledWidth() - width) / 2;
             int y = e.resolution.getScaledHeight() / 2 + 14;
             Gui.drawRect(x - 4, y - 3, x + width + 4, y + mc.fontRenderer.FONT_HEIGHT + 3, 0xB0000000);
-            mc.fontRenderer.drawStringWithShadow(label, x, y, 0xEEEEEE);
+            int color = selected.markerKind == null ? 0xEEEEEE : HintRenderStyle.markerColor(selected.markerKind);
+            mc.fontRenderer.drawStringWithShadow(label, x, y, color);
         }
 
         @SubscribeEvent
         public void onRenderWorldLast(RenderWorldLastEvent e) {
             if (allHintsForRender.isEmpty()) return;
-
-            // seriously, I'm not a OpenGL expert, so I'm probably doing a lot of very stupid stuff here.
-            // Please consider contributing patches if you find something to optimize.
 
             Profiler p = Minecraft.getMinecraft().mcProfiler;
 
@@ -738,46 +763,57 @@ public class ClientProxy extends CommonProxy {
             frustrum.setPosition(d0, d1, d2);
 
             GL11.glPushMatrix();
-            GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_CURRENT_BIT);
+            GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT
+                    | GL11.GL_CURRENT_BIT | GL11.GL_POLYGON_BIT);
             // we need the back facing rendered because the thing is transparent
             GL11.glDisable(GL11.GL_CULL_FACE);
             GL11.glDisable(GL11.GL_ALPHA_TEST);
+            GL11.glDisable(GL11.GL_LIGHTING);
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
             GL11.glEnable(GL11.GL_BLEND); // enable blend so it is transparent
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             GL11.glDepthMask(false);
             GL11.glEnable(GL11.GL_DEPTH_TEST);
+            GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
+            GL11.glPolygonOffset(-1, -1);
             // depth test begin as enabled
             boolean renderThrough = false;
+            boolean textured = true;
             Minecraft.getMinecraft().renderEngine.bindTexture(TextureMap.locationBlocksTexture);
             GL11.glTranslated(-d0 + i0, -d1 + i1, -d2 + i2);
             Tessellator tes = Tessellator.instance;
             tes.startDrawing(GL11.GL_TRIANGLES);
-            for (int i = 0, allHintsForRenderSize = allHintsForRender.size(), cubeDrawn = 0; i
-                    < allHintsForRenderSize; i++, cubeDrawn++) {
+            int cubesDrawn = 0;
+            for (int i = 0, allHintsForRenderSize = allHintsForRender.size(); i < allHintsForRenderSize; i++) {
                 HintParticleInfo hint = allHintsForRender.get(i);
                 if (!hint.isInFrustrum(frustrum)) continue;
-                if (renderThrough != hint.renderThrough) {
-                    if (i > 0) {
+                for (int pass = 0; pass < 2; pass++) {
+                    boolean texturedPass = pass == 0;
+                    if (texturedPass ? !hint.textured : hint.markerKind == null) continue;
+                    boolean through = hint.rendersThroughBlocks();
+                    // Flush before changing GL state; consecutive marker fills stay in the same batch.
+                    // Each cube contributes six faces, two triangles per face, three vertices per triangle.
+                    if (cubesDrawn > 0 && (renderThrough != through || textured != texturedPass
+                            || cubesDrawn >= 4096 / (6 * 2 * 3))) {
                         p.endStartSection("Draw");
                         tes.draw();
                         tes.startDrawing(GL11.GL_TRIANGLES);
-                        cubeDrawn = 0;
+                        cubesDrawn = 0;
                         p.endStartSection("Prepare");
                     }
-                    if (hint.renderThrough) GL11.glDisable(GL11.GL_DEPTH_TEST);
-                    else GL11.glEnable(GL11.GL_DEPTH_TEST);
-                    renderThrough = hint.renderThrough;
+                    if (renderThrough != through) {
+                        if (through) GL11.glDisable(GL11.GL_DEPTH_TEST);
+                        else GL11.glEnable(GL11.GL_DEPTH_TEST);
+                        renderThrough = through;
+                    }
+                    if (textured != texturedPass) {
+                        if (texturedPass) GL11.glEnable(GL11.GL_TEXTURE_2D);
+                        else GL11.glDisable(GL11.GL_TEXTURE_2D);
+                        textured = texturedPass;
+                    }
+                    hint.draw(tes, d0, d1, d2, i0, i1, i2, !texturedPass);
+                    cubesDrawn++;
                 }
-                // Minecraft Tessellator draw in batch of 4096. This plays nicely with quads, but for trigs
-                // it might occasionally end up with one half in first batch and the other half in later batch.
-                // so we manually flush the buffer here if that would happen.
-                // 6 faces per particle, 2 trig per face, 3 vertex per trig
-                if ((cubeDrawn + 1) >= 4096 / (6 * 2 * 3)) {
-                    tes.draw();
-                    tes.startDrawing(GL11.GL_TRIANGLES);
-                    cubeDrawn = 0;
-                }
-                hint.draw(tes, d0, d1, d2, i0, i1, i2);
             }
             p.endStartSection("Draw");
             tes.draw();
@@ -808,19 +844,20 @@ public class ClientProxy extends CommonProxy {
                 boolean through = false;
                 for (HintParticleInfo hint : allHintsForRender) {
                     if (hint.markerKind == null || !hint.isInFrustrum(frustrum)) continue;
-                    if (drawing && through != hint.renderThrough) {
+                    if (drawing && through != hint.rendersThroughBlocks()) {
                         tes.draw();
                         drawing = false;
                     }
                     if (!drawing) {
-                        through = hint.renderThrough;
+                        through = hint.rendersThroughBlocks();
                         if (through) GL11.glDisable(GL11.GL_DEPTH_TEST);
                         else GL11.glEnable(GL11.GL_DEPTH_TEST);
                         tes.startDrawing(GL11.GL_LINES);
                         drawing = true;
                     }
-                    int shade = pass == 0 ? 20 : 225;
-                    tes.setColorRGBA(shade, shade, shade, 230);
+                    int color = pass == 0 ? 0x141414 : HintRenderStyle.markerColor(hint.markerKind);
+                    tes.setBrightness(0x00F000F0);
+                    tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255, 230);
                     drawFrame(tes, hint.x - cameraX, hint.y - cameraY, hint.z - cameraZ);
                 }
                 if (drawing) tes.draw();
@@ -830,8 +867,12 @@ public class ClientProxy extends CommonProxy {
         }
 
         private static void drawFrame(Tessellator tes, int x, int y, int z) {
-            double minX = x + 0.05, minY = y + 0.05, minZ = z + 0.05;
-            double maxX = x + 0.95, maxY = y + 0.95, maxZ = z + 0.95;
+            double minX = x - HintRenderStyle.FRAME_MARGIN;
+            double minY = y - HintRenderStyle.FRAME_MARGIN;
+            double minZ = z - HintRenderStyle.FRAME_MARGIN;
+            double maxX = x + HintRenderStyle.BLOCK_SIZE + HintRenderStyle.FRAME_MARGIN;
+            double maxY = y + HintRenderStyle.BLOCK_SIZE + HintRenderStyle.FRAME_MARGIN;
+            double maxZ = z + HintRenderStyle.BLOCK_SIZE + HintRenderStyle.FRAME_MARGIN;
             for (int corner = 0; corner < 8; corner++) {
                 double cx = (corner & 1) == 0 ? minX : maxX;
                 double cy = (corner & 2) == 0 ? minY : maxY;

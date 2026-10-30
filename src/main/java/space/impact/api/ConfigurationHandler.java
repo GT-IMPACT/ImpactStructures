@@ -79,7 +79,7 @@ public enum ConfigurationHandler {
                 192,
                 1,
                 255,
-                "Alpha value of hologram particles. Higher the value, the more \"ghostly\" the hologram will appear to be.");
+                "Alpha value of hologram particles. Higher values are more opaque; service marker fills use one quarter of this opacity.");
         autoPlaceBudget = config.getInt(
                 "autoPlaceBudget",
                 "common.hologram",

@@ -24,7 +24,7 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 
 /**
  * Public API for IMPACT structure definitions, alignment and holograms.
- * Colored hints and neutral service markers are independent.
+ * Colored hints and service markers are independent.
  */
 public class ImpactAPI {
 
@@ -166,7 +166,7 @@ public class ImpactAPI {
         hintParticle(w, x, y, z, getBlockHint(), color.getMetadata());
     }
 
-    /** Draw a neutral service frame without reserving any colored block metadata. */
+    /** Draw a translucent service cube without reserving any colored block metadata. */
     public static void hintMarker(World w, int x, int y, int z, HintMarkerKind kind) {
         if (kind == null) throw new IllegalArgumentException("A service marker kind is required");
         proxy.hintMarker(w, x, y, z, kind);
@@ -178,7 +178,8 @@ public class ImpactAPI {
     }
 
     /**
-     * Add an error frame to a hint without changing its icons or color. Do nothing if the hint is not found.
+     * Add a translucent red error cube and outline without changing the hint's icons or color.
+     * Do nothing if the hint is not found.
      * <p>
      * Can be called on either client side or server side. Server side will schedule a network message to update it for
      * this player only. Will do nothing if no hint particle is found at given location.

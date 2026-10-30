@@ -4,6 +4,12 @@ package space.impact.api.client;
 public final class MarkerRayTrace {
     private MarkerRayTrace() {}
 
+    public static double blockIntersection(double ox, double oy, double oz, double dx, double dy, double dz,
+            int x, int y, int z, double range) {
+        return intersection(ox, oy, oz, dx, dy, dz, x, y, z,
+                x + HintRenderStyle.BLOCK_SIZE, y + HintRenderStyle.BLOCK_SIZE, z + HintRenderStyle.BLOCK_SIZE, range);
+    }
+
     /** Return forward ray distance to a box, or positive infinity when it is not hit within range. */
     public static double intersection(double ox, double oy, double oz, double dx, double dy, double dz,
             double minX, double minY, double minZ, double maxX, double maxY, double maxZ, double range) {
