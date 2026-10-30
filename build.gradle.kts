@@ -47,6 +47,48 @@ tasks.test {
     })
 }
 
+tasks.named("check") {
+    dependsOn(":ImpactAPI-KotlinX:check")
+}
+
+tasks.named("build") {
+    dependsOn(":ImpactAPI-KotlinX:build")
+}
+
+publishing.repositories.maven {
+    name = "consumerTest"
+    url = uri(layout.buildDirectory.dir("consumer-repository"))
+}
+
+val prepareKotlinXConsumerBuildLogic by tasks.registering(Copy::class) {
+    from("remote-build-logic") {
+        include("settings.gradle.kts", "libs.versions.toml", "plugins/build.gradle.kts", "plugins/src/main/**")
+    }
+    into(layout.buildDirectory.dir("consumer-build-logic"))
+}
+
+tasks.register<Exec>("verifyKotlinXConsumer") {
+    group = "verification"
+    description = "Tests the independently published KotlinX dev and reobf variants."
+    dependsOn(
+        ":publishMavenPublicationToConsumerTestRepository",
+        ":ImpactAPI-KotlinX:publishMavenPublicationToConsumerTestRepository",
+        prepareKotlinXConsumerBuildLogic,
+    )
+    doFirst {
+        val javaBinary = if (System.getProperty("os.name").startsWith("Windows")) "java.exe" else "java"
+        commandLine(
+            file("${System.getProperty("java.home")}/bin/$javaBinary"),
+            "-jar", file("gradle/wrapper/gradle-wrapper.jar"),
+            "-p", file("kotlinx/consumer-test"),
+            "build", "--no-daemon", "--console=plain",
+            "-PimpactVersion=${project.version}",
+            "-PconsumerRepository=${layout.buildDirectory.dir("consumer-repository").get().asFile.absolutePath}",
+            "-PbuildLogicDir=${layout.buildDirectory.dir("consumer-build-logic").get().asFile.absolutePath}",
+        )
+    }
+}
+
 tasks.withType<Jar>().configureEach {
     if (name in setOf("jar", "shadowJar", "sourcesJar")) {
         from(listOf("LICENSE", "LICENSE.LESSER", "NOTICE")) {

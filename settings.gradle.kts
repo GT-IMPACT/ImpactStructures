@@ -16,6 +16,9 @@ plugins {
 
 rootProject.name = "ImpactAPI"
 
+include(":ImpactAPI-KotlinX")
+project(":ImpactAPI-KotlinX").projectDir = file("kotlinx")
+
 dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {
