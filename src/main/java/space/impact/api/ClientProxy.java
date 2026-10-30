@@ -38,6 +38,7 @@ import net.minecraft.world.World;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
+import net.minecraftforge.client.event.TextureStitchEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.ConfigElement;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
@@ -47,6 +48,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.lwjgl.opengl.GL11;
 
 import space.impact.api.client.HintFrameGeometry;
+import space.impact.api.client.HintFrameTexture;
 import space.impact.api.client.HintRenderStyle;
 import space.impact.api.client.MarkerRayTrace;
 import space.impact.api.entity.fx.WeightlessParticleFX;
@@ -600,6 +602,33 @@ public class ClientProxy extends CommonProxy {
             return creationTime;
         }
 
+        public int drawColorFrame(Tessellator tes, double eyeX, double eyeY, double eyeZ,
+                int cameraX, int cameraY, int cameraZ) {
+            IIcon icon = HintFrameTexture.INSTANCE;
+            markTextureUsed(icon);
+            double u = (icon.getMinU() + icon.getMaxU()) / 2;
+            double v = (icon.getMinV() + icon.getMaxV()) / 2;
+            int color = frameColor.getRGB();
+            int brightness = w.blockExists(x, 0, z) ? w.getLightBrightnessForSkyBlocks(x, y, z, 0) : 0;
+            tes.setBrightness(brightness);
+            tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255,
+                    ConfigurationHandler.INSTANCE.getHintTransparency());
+            double localX = x - cameraX, localY = y - cameraY, localZ = z - cameraZ;
+            int vertices = 0;
+            for (int face = 0; face < 6; face++) {
+                if (!HintFrameGeometry.isFaceVisible(face, eyeX - x, eyeY - y, eyeZ - z)) continue;
+                for (int strip = 0; strip < 4; strip++) {
+                    for (int vertex = 0; vertex < 6; vertex++) {
+                        tes.addVertexWithUV(localX + HintFrameGeometry.coordinate(face, strip, vertex, 0),
+                                localY + HintFrameGeometry.coordinate(face, strip, vertex, 1),
+                                localZ + HintFrameGeometry.coordinate(face, strip, vertex, 2), u, v);
+                        vertices++;
+                    }
+                }
+            }
+            return vertices;
+        }
+
         public double getSquareDistanceTo(Vec3 point) {
             return point.squareDistanceTo(x + 0.5, y + 0.5, z + 0.5);
         }
@@ -685,6 +714,14 @@ public class ClientProxy extends CommonProxy {
     }
 
     public static class ForgeEventHandler {
+
+        @SubscribeEvent
+        public void onTextureStitch(TextureStitchEvent.Pre event) {
+            if (event.map.getTextureType() == 0) {
+                HintFrameTexture texture = HintFrameTexture.INSTANCE;
+                event.map.setTextureEntry(texture.getIconName(), texture);
+            }
+        }
 
         @SubscribeEvent
         @SideOnly(Side.CLIENT)
@@ -813,21 +850,21 @@ public class ClientProxy extends CommonProxy {
             GL11.glTranslated(-d0 + i0, -d1 + i1, -d2 + i2);
             Tessellator tes = Tessellator.instance;
             tes.startDrawing(GL11.GL_TRIANGLES);
-            int cubesDrawn = 0;
+            int verticesDrawn = 0;
             for (int i = 0, allHintsForRenderSize = allHintsForRender.size(); i < allHintsForRenderSize; i++) {
                 HintParticleInfo hint = allHintsForRender.get(i);
                 if (!hint.isInFrustrum(frustrum)) continue;
-                for (int pass = 0; pass < 2; pass++) {
-                    boolean texturedPass = pass == 0;
-                    if (texturedPass ? !hint.textured : hint.markerKind == null) continue;
-                    // Flush before changing GL state; consecutive marker fills stay in the same batch.
-                    // Each cube contributes six faces, two triangles per face, three vertices per triangle.
-                    if (cubesDrawn > 0 && (textured != texturedPass
-                            || cubesDrawn >= 4096 / (6 * 2 * 3))) {
+                for (int pass = 0; pass < 3; pass++) {
+                    if (pass == 0 && !hint.textured || pass == 1 && hint.markerKind == null
+                            || pass == 2 && hint.frameColor == null) continue;
+                    boolean texturedPass = pass != 1;
+                    int maxVertices = pass == 2 ? 6 * 4 * 6 : 6 * 2 * 3;
+                    // Textures and their frames share one atlas and remain adjacent in far-to-near order.
+                    if (verticesDrawn > 0 && (textured != texturedPass || verticesDrawn + maxVertices > 4096)) {
                         p.endStartSection("Draw");
                         tes.draw();
                         tes.startDrawing(GL11.GL_TRIANGLES);
-                        cubesDrawn = 0;
+                        verticesDrawn = 0;
                         p.endStartSection("Prepare");
                     }
                     if (textured != texturedPass) {
@@ -835,8 +872,12 @@ public class ClientProxy extends CommonProxy {
                         else GL11.glDisable(GL11.GL_TEXTURE_2D);
                         textured = texturedPass;
                     }
-                    hint.draw(tes, d0, d1, d2, i0, i1, i2, !texturedPass);
-                    cubesDrawn++;
+                    if (pass == 2) {
+                        verticesDrawn += hint.drawColorFrame(tes, d0, d1, d2, i0, i1, i2);
+                    } else {
+                        hint.draw(tes, d0, d1, d2, i0, i1, i2, pass == 1);
+                        verticesDrawn += maxVertices;
+                    }
                 }
             }
             p.endStartSection("Draw");
@@ -863,37 +904,6 @@ public class ClientProxy extends CommonProxy {
             int cameraX = (int) eyeX, cameraY = (int) eyeY, cameraZ = (int) eyeZ;
             GL11.glTranslated(-eyeX + cameraX, -eyeY + cameraY, -eyeZ + cameraZ);
             Tessellator tes = Tessellator.instance;
-
-            GL11.glDepthFunc(GL11.GL_LEQUAL);
-            GL11.glDisable(GL11.GL_LINE_STIPPLE);
-            GL11.glDisable(GL11.GL_CULL_FACE);
-            tes.startDrawing(GL11.GL_TRIANGLES);
-            int frameVertices = 0;
-            for (HintParticleInfo hint : allHintsForRender) {
-                if (hint.frameColor == null || !hint.isInFrustrum(frustrum)) continue;
-                // Never let automatic tessellator flushing split a triangle in the middle of a frame.
-                if (frameVertices + 6 * 4 * 6 > 4096) {
-                    tes.draw();
-                    tes.startDrawing(GL11.GL_TRIANGLES);
-                    frameVertices = 0;
-                }
-                int color = hint.frameColor.getRGB();
-                tes.setBrightness(0x00F000F0);
-                tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255, 255);
-                double x = hint.x - cameraX, y = hint.y - cameraY, z = hint.z - cameraZ;
-                for (int face = 0; face < 6; face++) {
-                    if (!HintFrameGeometry.isFaceVisible(face, eyeX - hint.x, eyeY - hint.y, eyeZ - hint.z)) continue;
-                    for (int strip = 0; strip < 4; strip++) {
-                        for (int vertex = 0; vertex < 6; vertex++) {
-                            tes.addVertex(x + HintFrameGeometry.coordinate(face, strip, vertex, 0),
-                                    y + HintFrameGeometry.coordinate(face, strip, vertex, 1),
-                                    z + HintFrameGeometry.coordinate(face, strip, vertex, 2));
-                            frameVertices++;
-                        }
-                    }
-                }
-            }
-            tes.draw();
 
             // Only hidden error edges pass GREATER; no filled faces or textures are drawn through walls.
             GL11.glDepthFunc(GL11.GL_GREATER);
