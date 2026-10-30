@@ -30,3 +30,9 @@ src/main/resources/mixins.*.json
 run/
 runDir/
 .gitattributes
+!src/main/resources/mcmod.info
+!src/main/resources/mixins.impactapi*.json
+!src/main/resources/META-INF/*_at.cfg
+!LICENSE
+!LICENSE.LESSER
+!NOTICE

@@ -1,0 +1,11 @@
+Impact Structures includes code adapted from StructureLib
+(GTNewHorizons/StructureLib, commit 0b5f4aa433e52fc8338e7f26ab520044bbb69c27).
+
+StructureLib was originally developed by TecTech authors including Technus,
+with subsequent contributions by glee8e and other StructureLib contributors.
+The upstream project identifies the combined work as LGPL-3.0; the included
+LICENSE and LICENSE.LESSER retain the upstream license texts.
+
+IMPACT adaptations: namespace and API refactoring, independent color and service
+hint systems, removal of GregTech integration, local item matching and tooltips,
+optional NEI integration, and build/runtime configuration.

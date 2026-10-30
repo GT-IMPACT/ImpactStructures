@@ -1,0 +1,18 @@
+[
+  {
+    "modid": "${modId}",
+    "name": "${modName}",
+    "description": "Structures, construction tools and colored holograms for IMPACT",
+    "version": "${modVersion}",
+    "mcversion": "${minecraftVersion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": [
+      "IMPACT"
+    ],
+    "credits": "See bundled NOTICE for upstream attribution",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]

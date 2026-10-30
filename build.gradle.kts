@@ -1,35 +1,56 @@
-import settings.getVersionMod
-
 plugins {
-    alias(libs.plugins.setup.minecraft)
-    alias(libs.plugins.setup.publish)
-    id(libs.plugins.buildconfig.get().pluginId)
+    id("minecraft-setup")
+    id("publish-setup")
 }
 
-val modId: String by extra
-val modName: String by extra
-val modGroup: String by extra
+impactMod {
+    modId.set("impactapi")
+    modName.set("Impact Structures")
+    modGroup.set("space.impact")
+    mavenGroup.set("space.impact")
+    mavenUrl.set("https://maven.accident.space/repository/maven-releases/")
+    usesMixins.set(true)
+    coreModClass.set("api.mixinplugin.ImpactEarlyMixins")
+    mixinConfigs.set(listOf("mixins.impactapi.json"))
+    accessTransformers.set(listOf("impactapi_at.cfg"))
+}
 
-extra.set("modVersion", getVersionMod())
+val modId = impactMod.modId.get()
+val modName = impactMod.modName.get()
+val modGroup = impactMod.modGroup.get()
 
 buildConfig {
     packageName("space.impact.$modId")
+    className("BuildConfigKt")
+    useJavaOutput()
     buildConfigField("String", "MODID", "\"${modId}\"")
     buildConfigField("String", "MODNAME", "\"${modName}\"")
-    buildConfigField("String", "VERSION", "\"${getVersionMod()}\"")
+    buildConfigField("String", "VERSION", "\"${project.version}\"")
     buildConfigField("String", "GROUPNAME", "\"${modGroup}\"")
-    useKotlinOutput { topLevelConstants = true }
-}
-
-repositories {
-    maven("https://maven.accident.space/repository/maven-public/") {
-        mavenContent {
-            includeGroup("space.impact")
-            includeGroupByRegex("space\\.impact\\..+")
-        }
-    }
 }
 
 dependencies {
-    compileOnlyApi("space.impact:gregtech-impact:5.09.35.32:dev") { isTransitive = false }
+    val nei = "com.github.GTNewHorizons:NotEnoughItems:2.8.158-GTNH:dev"
+    compileOnly(nei)
+    runtimeOnlyNonPublishable(nei)
+
+    testImplementation(platform("org.junit:junit-bom:5.9.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209")
+}
+
+tasks.test {
+    useJUnitPlatform()
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    })
+}
+
+tasks.withType<Jar>().configureEach {
+    if (name in setOf("jar", "shadowJar", "sourcesJar")) {
+        from(listOf("LICENSE", "LICENSE.LESSER", "NOTICE")) {
+            into("META-INF/licenses/impact-structures")
+        }
+    }
 }
