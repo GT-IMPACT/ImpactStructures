@@ -46,6 +46,7 @@ import net.minecraftforge.event.world.WorldEvent;
 import org.apache.commons.lang3.tuple.Pair;
 import org.lwjgl.opengl.GL11;
 
+import space.impact.api.client.HintFrameGeometry;
 import space.impact.api.client.HintRenderStyle;
 import space.impact.api.client.MarkerRayTrace;
 import space.impact.api.entity.fx.WeightlessParticleFX;
@@ -865,19 +866,34 @@ public class ClientProxy extends CommonProxy {
 
             GL11.glDepthFunc(GL11.GL_LEQUAL);
             GL11.glDisable(GL11.GL_LINE_STIPPLE);
-            for (int pass = 0; pass < 2; pass++) {
-                GL11.glLineWidth(pass == 0 ? 6 : 4);
-                tes.startDrawing(GL11.GL_LINES);
-                for (HintParticleInfo hint : allHintsForRender) {
-                    if (hint.frameColor == null || !hint.isInFrustrum(frustrum)) continue;
-                    int color = pass == 0 ? HintRenderStyle.frameBorderColor(hint.frameColor) : hint.frameColor.getRGB();
-                    tes.setBrightness(0x00F000F0);
-                    tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255, 255);
-                    drawFrame(tes, hint.x - cameraX, hint.y - cameraY, hint.z - cameraZ,
-                            HintRenderStyle.COLOR_FRAME_SIZE);
+            GL11.glDisable(GL11.GL_CULL_FACE);
+            tes.startDrawing(GL11.GL_TRIANGLES);
+            int frameVertices = 0;
+            for (HintParticleInfo hint : allHintsForRender) {
+                if (hint.frameColor == null || !hint.isInFrustrum(frustrum)) continue;
+                // Never let automatic tessellator flushing split a triangle in the middle of a frame.
+                if (frameVertices + 6 * 4 * 6 > 4096) {
+                    tes.draw();
+                    tes.startDrawing(GL11.GL_TRIANGLES);
+                    frameVertices = 0;
                 }
-                tes.draw();
+                int color = hint.frameColor.getRGB();
+                tes.setBrightness(0x00F000F0);
+                tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255, 255);
+                double x = hint.x - cameraX, y = hint.y - cameraY, z = hint.z - cameraZ;
+                for (int face = 0; face < 6; face++) {
+                    if (!HintFrameGeometry.isFaceVisible(face, eyeX - hint.x, eyeY - hint.y, eyeZ - hint.z)) continue;
+                    for (int strip = 0; strip < 4; strip++) {
+                        for (int vertex = 0; vertex < 6; vertex++) {
+                            tes.addVertex(x + HintFrameGeometry.coordinate(face, strip, vertex, 0),
+                                    y + HintFrameGeometry.coordinate(face, strip, vertex, 1),
+                                    z + HintFrameGeometry.coordinate(face, strip, vertex, 2));
+                            frameVertices++;
+                        }
+                    }
+                }
             }
+            tes.draw();
 
             // Only hidden error edges pass GREATER; no filled faces or textures are drawn through walls.
             GL11.glDepthFunc(GL11.GL_GREATER);

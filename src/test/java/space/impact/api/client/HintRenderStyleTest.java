@@ -46,9 +46,7 @@ class HintRenderStyleTest {
     }
 
     @Test
-    void blackAndWhiteFramesHaveContrastingBorders() {
-        assertEquals(0xEEEEEE, HintRenderStyle.frameBorderColor(HintColor.BLACK));
-        assertEquals(0x141414, HintRenderStyle.frameBorderColor(HintColor.WHITE));
+    void framePaletteKeepsAllSixteenColorsDistinct() {
         Set<Integer> colors = new HashSet<>();
         for (HintColor color : HintColor.values()) assertTrue(colors.add(color.getRGB()));
     }

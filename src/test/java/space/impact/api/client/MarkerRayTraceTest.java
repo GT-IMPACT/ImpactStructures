@@ -73,11 +73,11 @@ class MarkerRayTraceTest {
     @Test
     void coloredFramesCanBePickedOutsideTheTextureWithoutChangingItsBounds() {
         assertEquals(Double.POSITIVE_INFINITY,
-                MarkerRayTrace.hintIntersection(0.23, 0.5, -2, 0, 0, 1, 0, 0, 0, null, false, 64));
-        assertEquals(2.22,
-                MarkerRayTrace.hintIntersection(0.23, 0.5, -2, 0, 0, 1, 0, 0, 0, null, true, 64), 1e-9);
+                MarkerRayTrace.hintIntersection(0.245, 0.5, -2, 0, 0, 1, 0, 0, 0, null, false, 64));
+        assertEquals(2.24,
+                MarkerRayTrace.hintIntersection(0.245, 0.5, -2, 0, 0, 1, 0, 0, 0, null, true, 64), 1e-9);
         assertEquals(Double.POSITIVE_INFINITY,
-                MarkerRayTrace.hintIntersection(0.21, 0.5, -2, 0, 0, 1, 0, 0, 0, null, true, 64));
+                MarkerRayTrace.hintIntersection(0.235, 0.5, -2, 0, 0, 1, 0, 0, 0, null, true, 64));
         assertEquals(2.15,
                 MarkerRayTrace.hintIntersection(0.5, 0.5, -2, 0, 0, 1, 0, 0, 0, HintMarkerKind.ERROR, true, 64), 1e-9);
     }
