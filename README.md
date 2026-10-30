@@ -2,31 +2,42 @@
 
 [![Latest Release](https://img.shields.io/github/v/tag/GT-IMPACT/ImpactAPI?label=Latest&sort=semver)](https://github.com/GT-IMPACT/ImpactAPI/releases/latest)
 
-Библиотека структур, survival-строительства, каналов и цветных голограмм для Forge 1.7.10.
-Идентификатор мода — `impactapi`, Maven artifact — `space.impact:ImpactAPI`.
+Библиотека структур, survival-строительства, каналов и цветных голограмм для Minecraft 1.7.10
+и Forge 10.13.4.1614. Название мода — **Impact Structures**, идентификатор — `impactapi`.
 
-Сборка: `./gradlew clean build` на JDK 25. Для Minecraft и тестов нужен установленный JDK 8;
-байткод мода остаётся Java 8. UniMixins подключается общими Gradle-плагинами.
+| Модуль | Maven-координаты | Зависимости для игры |
+| --- | --- | --- |
+| Java-ядро | `space.impact:ImpactAPI:<version>` | UniMixins |
+| KotlinX, каталог `kotlinx/` | `space.impact:ImpactAPI-Ktx:<version>` | Impact Structures и Forgelin 2.1.3 |
 
-NEI доступен при компиляции и в среде разработки. `./gradlew runClient -PdevNei=false`
-запускает среду без NEI; `./gradlew runClient` — с NEI. NEI не публикуется обязательной
-зависимостью библиотеки. GregTech для компиляции и запуска библиотеки не нужен.
+KotlinX предоставляет DSL, extensions, receiver callbacks и ссылки на свойства поверх Java-ядра.
+Версии обоих артефактов должны совпадать. Kotlin runtime предоставляет Forgelin;
+ядро работает самостоятельно, без KotlinX и Forgelin. GregTech не требуется.
 
-Все 16 цветов HINT сохраняют прежние метаданные. Новый API принимает
-`HintColor`, например `StructureUtility.ofHint(HintColor.BLUE)`.
-Служебные подсказки рисуют отдельную нейтральную рамку и подпись при наведении.
+Для сборки нужны JDK 25 и установленный JDK 8 для Minecraft и тестов.
+Gradle 9.7.1 запускается через wrapper; Java и Kotlin компилируются в байткод Java 8.
+
+```sh
+git submodule update --init --recursive
+./gradlew clean build
+```
+
+В PowerShell используйте `.\gradlew.bat clean build`. Корневые `build` и `check` охватывают
+оба проекта. Dev, reobf и sources JAR создаются отдельно для каждого артефакта
+в `build/libs/` и `kotlinx/build/libs/`.
+
+NEI подключён как `compileOnly` и `runtimeOnlyNonPublishable`: доступен при компиляции
+и автоматически включён в среду разработки, но остаётся необязательной игровой интеграцией.
+UniMixins для среды разработки подключают общие Gradle-плагины.
+
+Все 16 цветов HINT используют прежние метаданные `0–15`.
+Java API: `StructureUtility.ofHint(HintColor.BLUE)`.
+Служебные маркеры `GENERIC`, `AIR`, `NOT_AIR`, `ERROR` используют отдельные рамки
+и локализованную подпись при наведении, сохраняя доступность всех цветов.
 
 Команды: `/istruct_channel` и `/istruct_registry_debug`.
 
-Для Kotlin доступен отдельный артефакт `space.impact:ImpactAPI-KotlinX` той же версии:
-типизированный DSL, extensions, receiver callbacks и ссылки на свойства. Kotlin runtime
-для KotlinX предоставляет мод Forgelin `2.1.3`; отдельные kotlin-stdlib/kotlin-reflect не подключаются.
-Основное Java-ядро не зависит от KotlinX или Forgelin.
-
-Проверка отдельных опубликованных артефактов: `./gradlew verifyKotlinXConsumer`.
-Задача использует временный Maven-репозиторий внутри `build/` и не публикует во внешний Maven.
-
-- [KotlinX: подключение и примеры](docs/kotlinx.md)
+[KotlinX: подключение, DSL и примеры контроллера](docs/kotlinx.md).
 
 Основан на закреплённом исходном коде StructureLib; происхождение и изменения описаны в
 [NOTICE](NOTICE), тексты лицензий — [LICENSE](LICENSE) и [LICENSE.LESSER](LICENSE.LESSER).

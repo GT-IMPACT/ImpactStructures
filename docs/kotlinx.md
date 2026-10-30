@@ -1,6 +1,6 @@
 # KotlinX: структуры на Kotlin
 
-`ImpactAPI-KotlinX` — отдельный Kotlin-фасад над Java API Impact Structures. Он создаёт обычные
+`ImpactAPI-Ktx` — отдельный Kotlin-фасад над Java API Impact Structures. Он создаёт обычные
 `IStructureDefinition`/`IStructureElement` и использует тот же обход, survival-строительство, каналы и голограммы.
 Существующий Java API остаётся доступен напрямую.
 
@@ -23,13 +23,13 @@ repositories {
 }
 
 dependencies {
-    implementation("space.impact:ImpactAPI-KotlinX:$impactVersion")
+    implementation("space.impact:ImpactAPI-Ktx:$impactVersion")
 }
 ```
 
 Ядро `space.impact:ImpactAPI` приходит через API-зависимость KotlinX. При использовании Gradle Module Metadata
 варианты выбираются средствами Gradle/RFG. Для старого потребителя, читающего только POM, dev-артефакт доступен
-с classifier `dev`: `space.impact:ImpactAPI-KotlinX:<version>:dev`.
+с classifier `dev`: `space.impact:ImpactAPI-Ktx:<version>:dev`.
 
 Runtime предоставляет **Forgelin 2.1.3** через зависимость KotlinX. Java-ядро от него не зависит. Отдельные `kotlin-stdlib`, `kotlin-reflect`
 или coroutines для KotlinX добавлять не требуется. Это библиотека без отдельного mod-bootstrap;
@@ -68,8 +68,7 @@ val definition: IStructureDefinition<ExampleController> = structure<ExampleContr
 
 Внутри builder тип контекста уже известен: у `block`, `air`, `hint`, `chain`, `tiered`, `customElement`
 не нужно повторять тип контроллера. Для вложенных контекстов и отложенного выбора доступны `contextElement`,
-`lazyElementFor`, `deferredElementWithTrigger`, `partitionBy` и другие фабрики. Полный список —
-[в матрице покрытия](kotlinx-coverage.md).
+`lazyElementFor`, `deferredElementWithTrigger`, `partitionBy` и другие фабрики.
 
 ## Callback и состояние контроллера
 
