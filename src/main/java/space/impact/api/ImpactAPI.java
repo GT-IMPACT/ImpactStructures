@@ -180,6 +180,7 @@ public class ImpactAPI {
     /**
      * Add a translucent red error cube and outline without changing the hint's icons or color.
      * Create an ERROR marker at the given position if no hint exists there.
+     * Occluded error edges use a dashed outline; filled faces remain hidden behind world blocks.
      * <p>
      * Can be called on either client side or server side. Server side will schedule a network message to update it for
      * this player only.

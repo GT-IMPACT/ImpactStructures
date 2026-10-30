@@ -779,10 +779,9 @@ public class ClientProxy extends CommonProxy {
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             GL11.glDepthMask(false);
             GL11.glEnable(GL11.GL_DEPTH_TEST);
+            GL11.glDepthFunc(GL11.GL_LEQUAL);
             GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
             GL11.glPolygonOffset(-1, -1);
-            // depth test begin as enabled
-            boolean renderThrough = false;
             boolean textured = true;
             Minecraft.getMinecraft().renderEngine.bindTexture(TextureMap.locationBlocksTexture);
             GL11.glTranslated(-d0 + i0, -d1 + i1, -d2 + i2);
@@ -795,21 +794,15 @@ public class ClientProxy extends CommonProxy {
                 for (int pass = 0; pass < 2; pass++) {
                     boolean texturedPass = pass == 0;
                     if (texturedPass ? !hint.textured : hint.markerKind == null) continue;
-                    boolean through = hint.rendersThroughBlocks();
                     // Flush before changing GL state; consecutive marker fills stay in the same batch.
                     // Each cube contributes six faces, two triangles per face, three vertices per triangle.
-                    if (cubesDrawn > 0 && (renderThrough != through || textured != texturedPass
+                    if (cubesDrawn > 0 && (textured != texturedPass
                             || cubesDrawn >= 4096 / (6 * 2 * 3))) {
                         p.endStartSection("Draw");
                         tes.draw();
                         tes.startDrawing(GL11.GL_TRIANGLES);
                         cubesDrawn = 0;
                         p.endStartSection("Prepare");
-                    }
-                    if (renderThrough != through) {
-                        if (through) GL11.glDisable(GL11.GL_DEPTH_TEST);
-                        else GL11.glEnable(GL11.GL_DEPTH_TEST);
-                        renderThrough = through;
                     }
                     if (textured != texturedPass) {
                         if (texturedPass) GL11.glEnable(GL11.GL_TEXTURE_2D);
@@ -840,32 +833,39 @@ public class ClientProxy extends CommonProxy {
             GL11.glEnable(GL11.GL_BLEND);
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             GL11.glDepthMask(false);
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
             int cameraX = (int) eyeX, cameraY = (int) eyeY, cameraZ = (int) eyeZ;
             GL11.glTranslated(-eyeX + cameraX, -eyeY + cameraY, -eyeZ + cameraZ);
             Tessellator tes = Tessellator.instance;
+
+            // Only hidden error edges pass GREATER; no filled faces or textures are drawn through walls.
+            GL11.glDepthFunc(GL11.GL_GREATER);
+            GL11.glEnable(GL11.GL_LINE_STIPPLE);
+            GL11.glLineStipple(1, (short) 0x0F0F);
+            GL11.glLineWidth(1.5F);
+            tes.startDrawing(GL11.GL_LINES);
+            for (HintParticleInfo hint : allHintsForRender) {
+                if (!hint.rendersThroughBlocks() || !hint.isInFrustrum(frustrum)) continue;
+                int color = HintRenderStyle.markerColor(hint.markerKind);
+                tes.setBrightness(0x00F000F0);
+                tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255, 140);
+                drawFrame(tes, hint.x - cameraX, hint.y - cameraY, hint.z - cameraZ, hint.markerKind);
+            }
+            tes.draw();
+
+            GL11.glDisable(GL11.GL_LINE_STIPPLE);
+            GL11.glDepthFunc(GL11.GL_LEQUAL);
             for (int pass = 0; pass < 2; pass++) {
                 GL11.glLineWidth(pass == 0 ? 3 : 1);
-                boolean drawing = false;
-                boolean through = false;
+                tes.startDrawing(GL11.GL_LINES);
                 for (HintParticleInfo hint : allHintsForRender) {
                     if (hint.markerKind == null || !hint.isInFrustrum(frustrum)) continue;
-                    if (drawing && through != hint.rendersThroughBlocks()) {
-                        tes.draw();
-                        drawing = false;
-                    }
-                    if (!drawing) {
-                        through = hint.rendersThroughBlocks();
-                        if (through) GL11.glDisable(GL11.GL_DEPTH_TEST);
-                        else GL11.glEnable(GL11.GL_DEPTH_TEST);
-                        tes.startDrawing(GL11.GL_LINES);
-                        drawing = true;
-                    }
                     int color = pass == 0 ? 0x141414 : HintRenderStyle.markerColor(hint.markerKind);
                     tes.setBrightness(0x00F000F0);
                     tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255, 230);
                     drawFrame(tes, hint.x - cameraX, hint.y - cameraY, hint.z - cameraZ, hint.markerKind);
                 }
-                if (drawing) tes.draw();
+                tes.draw();
             }
             GL11.glPopAttrib();
             GL11.glPopMatrix();
