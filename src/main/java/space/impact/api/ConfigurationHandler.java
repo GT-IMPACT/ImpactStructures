@@ -72,7 +72,7 @@ public enum ConfigurationHandler {
                 true,
                 "An attempt will be made to remove an existing hologram if it collides with a new hologram.");
         hintLifespan = config
-                .getInt("hintLifespan", "client.hologram", 400, 1, 20000, "Ticks before a hologram disappears.");
+                .getInt("hintLifespan", "client.hologram", 6000, 1, 20000, "Ticks before a hologram disappears.");
         hintTransparency = config.getInt(
                 "hintTransparency",
                 "client.hologram",
