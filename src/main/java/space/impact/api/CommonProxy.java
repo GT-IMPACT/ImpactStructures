@@ -17,6 +17,7 @@ import net.minecraftforge.common.MinecraftForge;
 import space.impact.api.net.ErrorHintParticleMessage;
 import space.impact.api.net.UpdateHintParticleMessage;
 import space.impact.api.net.HintMarkerMessage;
+import space.impact.api.hint.HintColor;
 import space.impact.api.hint.HintMarkerKind;
 
 import cpw.mods.fml.common.event.FMLInitializationEvent;
@@ -41,6 +42,8 @@ public class CommonProxy {
     public void hintParticle(World w, int x, int y, int z, IIcon[] icons) {}
 
     public void hintParticle(World w, int x, int y, int z, Block block, int meta) {}
+
+    public void hintFrame(World w, int x, int y, int z, HintColor color) {}
 
     /** Client tasks are intentionally ignored by a dedicated server proxy. */
     public void enqueueClientTask(Runnable task) {}

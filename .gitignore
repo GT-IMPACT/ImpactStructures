@@ -21,6 +21,7 @@ build/
 idea/
 .idea/
 .gradle/
+.kotlin/
 *.psd
 *.jar1
 *.psd

@@ -9,7 +9,7 @@ public final class JavaConsumer {
     public static IStructureDefinition<Object> definition() {
         return StructureDefinition.<Object>builder()
                 .addShape("main", new String[][] {{"~H"}})
-                .addElement('H', StructureUtility.ofHint(HintColor.WHITE))
+                .addElement('H', StructureUtility.withHint(StructureUtility.ofHint(HintColor.WHITE), HintColor.BLUE))
                 .build();
     }
 }

@@ -23,6 +23,7 @@ import net.minecraft.util.IChatComponent;
 import net.minecraft.world.World;
 
 import space.impact.api.ImpactAPI;
+import space.impact.api.hint.HintColor;
 import space.impact.api.util.ItemStackPredicate;
 import space.impact.api.util.ItemStackPredicate.NBTMode;
 
@@ -80,6 +81,11 @@ public interface IStructureElement<T> {
     boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger);
 
     boolean placeBlock(T t, World world, int x, int y, int z, ItemStack trigger);
+
+    /** Decorate this element's existing hint with a colored frame, without changing construction behavior. */
+    default IStructureElement<T> withHint(HintColor color) {
+        return StructureUtility.withHint(this, color);
+    }
 
     /**
      * Try place the block by taking resource from given IItemSource.

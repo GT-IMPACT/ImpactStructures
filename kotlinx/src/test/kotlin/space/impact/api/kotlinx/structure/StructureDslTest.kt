@@ -15,6 +15,50 @@ import space.impact.api.structure.StructureUtility
 internal class StructureDslTest {
 
     @Test
+    fun coloredFramesSupportNamedFactoriesMemberCallsAndDslInference() {
+        val casing = object : Block(Material.rock) {}
+        val world = StructureTestWorld.create(casing)
+        val context = StructureController()
+        val decorated = withHint(
+            element = constantElement(true),
+            color = HintColor.BLUE,
+        )
+        assertTrue(decorated.check(
+            context,
+            world,
+            0,
+            0,
+            0,
+        ))
+        assertTrue(constantElement(true).withHint(HintColor.RED).check(
+            context,
+            world,
+            0,
+            0,
+            0,
+        ))
+
+        val definition = structure<StructureController> {
+            shape(name = "main") {
+                layer("A~")
+            }
+            element(
+                symbol = 'A',
+                element = withHint(
+                    element = block(block = casing),
+                    color = HintColor.BLACK,
+                ),
+            )
+        }
+        assertTrue(definition.isContainedInStructure(
+            "main",
+            0,
+            0,
+            0,
+        ))
+    }
+
+    @Test
     fun raggedLayersMatchJavaShapeOccupancyAndSpecialCharacters() {
         val accepted = constantElement(true)
         val dsl = structure<StructureController> {

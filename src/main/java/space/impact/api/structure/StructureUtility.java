@@ -516,9 +516,13 @@ public class StructureUtility {
     // region hint only
 
     /**
-     * Spawn a colored hint. Check always returns: true. Only useful as a fallback, e.g.
-     * {@link #ofBlockUnlocalizedName(String, String, int, IStructureElement)}
+     * Add a colored frame around an element's existing hint without changing its textures or construction behavior.
      */
+    public static <T> IStructureElement<T> withHint(IStructureElement<T> element, HintColor color) {
+        return new HintedStructureElement<>(element, color);
+    }
+
+    /** Spawn a standalone colored hint cube. */
     public static <T> IStructureElementNoPlacement<T> ofHint(HintColor color) {
         int meta = Objects.requireNonNull(color, "color").getMetadata();
         return new IStructureElementNoPlacement<T>() {

@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import space.impact.api.hint.HintColor;
 import space.impact.api.hint.HintMarkerKind;
 
 class HintRenderStyleTest {
@@ -42,5 +43,13 @@ class HintRenderStyleTest {
         for (HintMarkerKind kind : HintMarkerKind.values()) {
             assertEquals(kind == HintMarkerKind.ERROR, HintRenderStyle.rendersThroughBlocks(kind));
         }
+    }
+
+    @Test
+    void blackAndWhiteFramesHaveContrastingBorders() {
+        assertEquals(0xEEEEEE, HintRenderStyle.frameBorderColor(HintColor.BLACK));
+        assertEquals(0x141414, HintRenderStyle.frameBorderColor(HintColor.WHITE));
+        Set<Integer> colors = new HashSet<>();
+        for (HintColor color : HintColor.values()) assertTrue(colors.add(color.getRGB()));
     }
 }

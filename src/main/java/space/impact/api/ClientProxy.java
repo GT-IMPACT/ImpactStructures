@@ -49,6 +49,7 @@ import org.lwjgl.opengl.GL11;
 import space.impact.api.client.HintRenderStyle;
 import space.impact.api.client.MarkerRayTrace;
 import space.impact.api.entity.fx.WeightlessParticleFX;
+import space.impact.api.hint.HintColor;
 import space.impact.api.hint.HintMarkerKind;
 import space.impact.api.item.ItemConstructableTrigger;
 import space.impact.api.net.RegistryOrderSyncMessage;
@@ -144,6 +145,17 @@ public class ClientProxy extends CommonProxy {
     }
 
     @Override
+    public void hintFrame(World w, int x, int y, int z, HintColor color) {
+        if (w == null || !w.isRemote || w != Minecraft.getMinecraft().theWorld) return;
+        HintParticleInfo hint = getHintParticleInfo(w, x, y, z);
+        if (hint == null) {
+            hintParticleTinted(w, x, y, z, new IIcon[6], RGBA_NO_TINT);
+            hint = getHintParticleInfo(w, x, y, z);
+        }
+        if (hint != null) hint.frameColor = color;
+    }
+
+    @Override
     public void hintParticleTinted(World w, int x, int y, int z, IIcon[] icons, short[] RGBa) {
         addHint(w, x, y, z, icons, RGBa, null, 0);
     }
@@ -157,6 +169,7 @@ public class ClientProxy extends CommonProxy {
         HintParticleInfo samePosition = getHintParticleInfo(w, x, y, z);
         if (samePosition != null && allHints.get(samePosition) == currentHints) {
             info.markerKind = samePosition.markerKind;
+            info.frameColor = samePosition.frameColor;
             currentHints.getHints().remove(samePosition);
         }
 
@@ -400,6 +413,7 @@ public class ClientProxy extends CommonProxy {
         private ItemStack displayStack;
         private short[] tint;
         private HintMarkerKind markerKind;
+        private HintColor frameColor;
 
         private final long creationTime = System.currentTimeMillis(); // use tick time instead maybe
 
@@ -467,8 +481,8 @@ public class ClientProxy extends CommonProxy {
         }
 
         public boolean isInFrustrum(Frustrum frustrum) {
-            double inset = HintRenderStyle.cubeInset(markerKind);
-            double size = HintRenderStyle.cubeSize(markerKind);
+            double size = HintRenderStyle.displaySize(markerKind, frameColor != null);
+            double inset = (HintRenderStyle.BLOCK_SIZE - size) / 2;
             double margin = HintRenderStyle.FRAME_MARGIN;
             return frustrum.isBoxInFrustum(x + inset - margin, y + inset - margin, z + inset - margin,
                     x + inset + size + margin, y + inset + size + margin, z + inset + size + margin);
@@ -729,9 +743,10 @@ public class ClientProxy extends CommonProxy {
             double nearest = Double.POSITIVE_INFINITY;
             HintParticleInfo selected = null;
             for (HintParticleInfo hint : allHintsForRender) {
-                if (hint.w != mc.theWorld || !hint.textured && hint.markerKind == null) continue;
+                if (hint.w != mc.theWorld || !hint.textured && hint.markerKind == null && hint.frameColor == null) continue;
                 double distance = MarkerRayTrace.hintIntersection(eyeX, eyeY, eyeZ,
-                        look.xCoord, look.yCoord, look.zCoord, hint.x, hint.y, hint.z, hint.markerKind, 64);
+                        look.xCoord, look.yCoord, look.zCoord, hint.x, hint.y, hint.z,
+                        hint.markerKind, hint.frameColor != null, 64);
                 if (!hint.rendersThroughBlocks() && distance > obstructionDistance + 0.01) continue;
                 if (distance < nearest) {
                     nearest = distance;
@@ -740,12 +755,22 @@ public class ClientProxy extends CommonProxy {
             }
             if (selected == null) return;
             String label = selected.getDisplayName();
-            int width = mc.fontRenderer.getStringWidth(label);
-            int x = (e.resolution.getScaledWidth() - width) / 2;
+            String colorLabel = selected.frameColor == null ? null
+                    : I18n.format("tile.impactapi.blockhint." + selected.frameColor.getMetadata() + ".name");
+            int labelWidth = mc.fontRenderer.getStringWidth(label);
+            int colorWidth = colorLabel == null ? 0 : mc.fontRenderer.getStringWidth(colorLabel);
+            int width = Math.max(labelWidth, colorWidth);
+            int centerX = e.resolution.getScaledWidth() / 2;
             int y = e.resolution.getScaledHeight() / 2 + 14;
-            Gui.drawRect(x - 4, y - 3, x + width + 4, y + mc.fontRenderer.FONT_HEIGHT + 3, 0xB0000000);
+            int lineHeight = mc.fontRenderer.FONT_HEIGHT + 2;
+            int height = mc.fontRenderer.FONT_HEIGHT + (colorLabel == null ? 0 : lineHeight);
+            Gui.drawRect(centerX - width / 2 - 4, y - 3,
+                    centerX + (width + 1) / 2 + 4, y + height + 3, 0xB0000000);
             int color = selected.markerKind == null ? 0xEEEEEE : HintRenderStyle.markerColor(selected.markerKind);
-            mc.fontRenderer.drawStringWithShadow(label, x, y, color);
+            mc.fontRenderer.drawStringWithShadow(label, centerX - labelWidth / 2, y, color);
+            if (colorLabel != null) {
+                mc.fontRenderer.drawStringWithShadow(colorLabel, centerX - colorWidth / 2, y + lineHeight, 0xDDDDDD);
+            }
         }
 
         @SubscribeEvent
@@ -838,6 +863,22 @@ public class ClientProxy extends CommonProxy {
             GL11.glTranslated(-eyeX + cameraX, -eyeY + cameraY, -eyeZ + cameraZ);
             Tessellator tes = Tessellator.instance;
 
+            GL11.glDepthFunc(GL11.GL_LEQUAL);
+            GL11.glDisable(GL11.GL_LINE_STIPPLE);
+            for (int pass = 0; pass < 2; pass++) {
+                GL11.glLineWidth(pass == 0 ? 6 : 4);
+                tes.startDrawing(GL11.GL_LINES);
+                for (HintParticleInfo hint : allHintsForRender) {
+                    if (hint.frameColor == null || !hint.isInFrustrum(frustrum)) continue;
+                    int color = pass == 0 ? HintRenderStyle.frameBorderColor(hint.frameColor) : hint.frameColor.getRGB();
+                    tes.setBrightness(0x00F000F0);
+                    tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255, 255);
+                    drawFrame(tes, hint.x - cameraX, hint.y - cameraY, hint.z - cameraZ,
+                            HintRenderStyle.COLOR_FRAME_SIZE);
+                }
+                tes.draw();
+            }
+
             // Only hidden error edges pass GREATER; no filled faces or textures are drawn through walls.
             GL11.glDepthFunc(GL11.GL_GREATER);
             GL11.glEnable(GL11.GL_LINE_STIPPLE);
@@ -872,8 +913,11 @@ public class ClientProxy extends CommonProxy {
         }
 
         private static void drawFrame(Tessellator tes, int x, int y, int z, HintMarkerKind kind) {
-            double inset = HintRenderStyle.cubeInset(kind);
-            double size = HintRenderStyle.cubeSize(kind);
+            drawFrame(tes, x, y, z, HintRenderStyle.cubeSize(kind));
+        }
+
+        private static void drawFrame(Tessellator tes, int x, int y, int z, double size) {
+            double inset = (HintRenderStyle.BLOCK_SIZE - size) / 2;
             double minX = x + inset - HintRenderStyle.FRAME_MARGIN;
             double minY = y + inset - HintRenderStyle.FRAME_MARGIN;
             double minZ = z + inset - HintRenderStyle.FRAME_MARGIN;

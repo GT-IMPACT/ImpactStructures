@@ -12,7 +12,10 @@ public fun consumerDefinition(): IStructureDefinition<ConsumerContext> {
 
         element(
             symbol = 'H',
-            element = hint(HintColor.WHITE),
+            element = withHint(
+                element = hint(HintColor.WHITE),
+                color = HintColor.BLUE,
+            ),
         )
     }
 }

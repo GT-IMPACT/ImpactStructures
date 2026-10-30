@@ -1,5 +1,6 @@
 package space.impact.api.client;
 
+import space.impact.api.hint.HintColor;
 import space.impact.api.hint.HintMarkerKind;
 
 /** Shared geometry and appearance of client-side holograms. */
@@ -7,6 +8,7 @@ public final class HintRenderStyle {
 
     public static final double BLOCK_SIZE = 1.0;
     public static final double FRAME_MARGIN = 0.002;
+    public static final double COLOR_FRAME_SIZE = 0.56;
 
     private HintRenderStyle() {}
 
@@ -16,6 +18,16 @@ public final class HintRenderStyle {
 
     public static double cubeInset(HintMarkerKind kind) {
         return (BLOCK_SIZE - cubeSize(kind)) / 2;
+    }
+
+    public static double displaySize(HintMarkerKind kind, boolean colorFrame) {
+        return colorFrame ? Math.max(cubeSize(kind), COLOR_FRAME_SIZE) : cubeSize(kind);
+    }
+
+    public static int frameBorderColor(HintColor color) {
+        int rgb = color.getRGB();
+        int luminance = (299 * (rgb >> 16 & 255) + 587 * (rgb >> 8 & 255) + 114 * (rgb & 255)) / 1000;
+        return luminance < 96 ? 0xEEEEEE : 0x141414;
     }
 
     public static int markerColor(HintMarkerKind kind) {

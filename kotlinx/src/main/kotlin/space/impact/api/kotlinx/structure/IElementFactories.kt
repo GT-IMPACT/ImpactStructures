@@ -53,6 +53,7 @@ import space.impact.api.kotlinx.structure.step as createStep
 import space.impact.api.kotlinx.structure.tiered as createTiered
 import space.impact.api.kotlinx.structure.tieredCheckOnly as createTieredCheckOnly
 import space.impact.api.kotlinx.structure.tileAdder as createTileAdder
+import space.impact.api.kotlinx.structure.withHint as createWithHint
 
 /** Factories keep the controller type inferred inside a structure builder. */
 public interface IElementFactories<T> {
@@ -175,6 +176,16 @@ public interface IElementFactories<T> {
 
     public fun hint(color: HintColor): IStructureElementNoPlacement<T> {
         return createHint<T>(color)
+    }
+
+    public fun withHint(
+        element: IStructureElement<T>,
+        color: HintColor,
+    ): IStructureElement<T> {
+        return createWithHint(
+            element = element,
+            color = color,
+        )
     }
 
     public fun hintDeferred(

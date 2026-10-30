@@ -166,6 +166,12 @@ public class ImpactAPI {
         hintParticle(w, x, y, z, getBlockHint(), color.getMetadata());
     }
 
+    /** Add a separate colored frame to a client hint, preserving its textures, tint and block identity. */
+    public static void hintFrame(World w, int x, int y, int z, HintColor color) {
+        if (color == null) throw new IllegalArgumentException("A frame color is required");
+        proxy.hintFrame(w, x, y, z, color);
+    }
+
     /** Draw a translucent service cube without reserving any colored block metadata. */
     public static void hintMarker(World w, int x, int y, int z, HintMarkerKind kind) {
         if (kind == null) throw new IllegalArgumentException("A service marker kind is required");

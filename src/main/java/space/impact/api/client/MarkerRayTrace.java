@@ -22,8 +22,13 @@ public final class MarkerRayTrace {
 
     public static double hintIntersection(double ox, double oy, double oz, double dx, double dy, double dz,
             int x, int y, int z, HintMarkerKind kind, double range) {
-        double inset = HintRenderStyle.cubeInset(kind);
-        double size = HintRenderStyle.cubeSize(kind);
+        return hintIntersection(ox, oy, oz, dx, dy, dz, x, y, z, kind, false, range);
+    }
+
+    public static double hintIntersection(double ox, double oy, double oz, double dx, double dy, double dz,
+            int x, int y, int z, HintMarkerKind kind, boolean colorFrame, double range) {
+        double size = HintRenderStyle.displaySize(kind, colorFrame);
+        double inset = (HintRenderStyle.BLOCK_SIZE - size) / 2;
         return intersection(ox, oy, oz, dx, dy, dz, x + inset, y + inset, z + inset,
                 x + inset + size, y + inset + size, z + inset + size, range);
     }

@@ -70,6 +70,21 @@ val definition: IStructureDefinition<ExampleController> = structure<ExampleContr
 не нужно повторять тип контроллера. Для вложенных контекстов и отложенного выбора доступны `contextElement`,
 `lazyElementFor`, `deferredElementWithTrigger`, `partitionBy` и другие фабрики.
 
+Для текстуры блока с отдельной цветной рамкой используйте `withHint`:
+
+```kotlin
+withHint(
+    element = block(block = casingBlock),
+    color = HintColor.BLUE,
+)
+```
+
+Текстурный куб остаётся размером `0.5`, рамка имеет размер `0.56` и толщину 4 пикселя
+с контрастной обводкой. Цвет рамки не изменяет tint текстуры. Проверки, каналы,
+описания и строительство выполняет исходный элемент. Доступен также вызов
+`element.withHint(HintColor.BLUE)`; в Java — `StructureUtility.withHint(element, HintColor.BLUE)`.
+При наведении название блока и цвет HINT выводятся двумя строками, каждая выровнена по центру под прицелом.
+
 ## Callback и состояние контроллера
 
 ```kotlin
