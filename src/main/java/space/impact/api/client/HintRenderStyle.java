@@ -11,8 +11,7 @@ public final class HintRenderStyle {
     private HintRenderStyle() {}
 
     public static double cubeSize(HintMarkerKind kind) {
-        if (kind == HintMarkerKind.ERROR) return 0.7;
-        return kind == null ? 0.5 : 0.9;
+        return kind == null ? 0.5 : 0.7;
     }
 
     public static double cubeInset(HintMarkerKind kind) {

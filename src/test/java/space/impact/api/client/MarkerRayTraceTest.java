@@ -61,17 +61,12 @@ class MarkerRayTraceTest {
     }
 
     @Test
-    void onlyFormerlyFullBlockErrorsShrinkToSevenTenths() {
+    void everyServiceMarkerUsesCenteredSevenTenthsBounds() {
         for (HintMarkerKind kind : HintMarkerKind.values()) {
             double centerHit = MarkerRayTrace.hintIntersection(0.5, 0.5, -2, 0, 0, 1, 0, 0, 0, kind, 64);
             double edgeHit = MarkerRayTrace.hintIntersection(0.9, 0.5, -2, 0, 0, 1, 0, 0, 0, kind, 64);
-            if (kind == HintMarkerKind.ERROR) {
-                assertEquals(2.15, centerHit, 1e-9);
-                assertEquals(Double.POSITIVE_INFINITY, edgeHit);
-            } else {
-                assertEquals(2.05, centerHit, 1e-9);
-                assertEquals(2.05, edgeHit, 1e-9);
-            }
+            assertEquals(2.15, centerHit, 1e-9);
+            assertEquals(Double.POSITIVE_INFINITY, edgeHit);
         }
     }
 }
