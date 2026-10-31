@@ -22,7 +22,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.IChatComponent;
 import net.minecraft.world.World;
 
-import space.impact.api.ImpactAPI;
+import space.impact.api.ImpactStructures;
 import space.impact.api.hint.HintColor;
 import space.impact.api.util.ItemStackPredicate;
 import space.impact.api.util.ItemStackPredicate.NBTMode;
@@ -108,10 +108,10 @@ public interface IStructureElement<T> {
     default PlaceResult survivalPlaceBlock(T t, World world, int x, int y, int z, ItemStack trigger, IItemSource s,
             EntityPlayerMP actor, Consumer<IChatComponent> chatter) {
         if (PANIC_MODE) throw new RuntimeException("Panic Tripwire hit");
-        if (ImpactAPI.isDebugEnabled()) LOGGER.error(
+        if (ImpactStructures.isDebugEnabled()) LOGGER.error(
                 "Default implementation of survivalPlaceBlock hit! Things aren't going to work well! IStructureElement class: {}",
                 getClass().getName());
-        if (!ImpactAPI.isBlockTriviallyReplaceable(world, x, y, z, actor)) return PlaceResult.REJECT;
+        if (!ImpactStructures.isBlockTriviallyReplaceable(world, x, y, z, actor)) return PlaceResult.REJECT;
         return PlaceResult.REJECT_CONTINUE;
     }
 
@@ -220,7 +220,7 @@ public interface IStructureElement<T> {
         if (actor instanceof EntityPlayerMP)
             return survivalPlaceBlock(t, world, x, y, z, trigger, source, (EntityPlayerMP) actor, chatter);
         if (PANIC_MODE) throw new RuntimeException("Panic Tripwire hit");
-        if (ImpactAPI.isDebugEnabled()) LOGGER.info(
+        if (ImpactStructures.isDebugEnabled()) LOGGER.info(
                 "Fallback shim code of survivalPlaceBlock hit! Things aren't going to work well! IStructureElement class: {}",
                 getClass().getName());
         return PlaceResult.REJECT_CONTINUE;

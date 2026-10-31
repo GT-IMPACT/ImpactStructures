@@ -6,21 +6,21 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import space.impact.api.ImpactAPI
+import space.impact.api.ImpactStructures
 
 internal class InstrumentationScopeTest {
 
     @AfterEach
     fun clearInstrumentation() {
-        if (ImpactAPI.isInstrumentEnabled()) {
-            ImpactAPI.disableInstrument()
+        if (ImpactStructures.isInstrumentEnabled()) {
+            ImpactStructures.disableInstrument()
         }
     }
 
     @Test
     fun returnsTheBlockValueAndClosesTheRealJavaInstrument() {
         val value: String = withInstrumentation(identifier = "normal-return") {
-            assertTrue(ImpactAPI.isInstrumentEnabled())
+            assertTrue(ImpactStructures.isInstrumentEnabled())
             "value"
         }
 
@@ -28,7 +28,7 @@ internal class InstrumentationScopeTest {
             "value",
             value,
         )
-        assertFalse(ImpactAPI.isInstrumentEnabled())
+        assertFalse(ImpactStructures.isInstrumentEnabled())
     }
 
     @Test
@@ -37,7 +37,7 @@ internal class InstrumentationScopeTest {
             IllegalArgumentException::class.java,
             {
                 withInstrumentation(identifier = "exception") {
-                    assertTrue(ImpactAPI.isInstrumentEnabled())
+                    assertTrue(ImpactStructures.isInstrumentEnabled())
                     throw IllegalArgumentException("body failure")
                 }
             },
@@ -47,7 +47,7 @@ internal class InstrumentationScopeTest {
             "body failure",
             failure.message,
         )
-        assertFalse(ImpactAPI.isInstrumentEnabled())
+        assertFalse(ImpactStructures.isInstrumentEnabled())
     }
 
     @Test
@@ -61,9 +61,9 @@ internal class InstrumentationScopeTest {
                     }
                 },
             )
-            assertTrue(ImpactAPI.isInstrumentEnabled())
+            assertTrue(ImpactStructures.isInstrumentEnabled())
         }
 
-        assertFalse(ImpactAPI.isInstrumentEnabled())
+        assertFalse(ImpactStructures.isInstrumentEnabled())
     }
 }

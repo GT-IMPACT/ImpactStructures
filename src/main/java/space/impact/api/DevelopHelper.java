@@ -14,17 +14,17 @@ public class DevelopHelper {
     public static void onPreInit() {
         if (!DEBUG) return;
         Main.LOGGER.info("Running develop helper");
-        ImpactAPI.registerChannelDescription("sandstone", ImpactAPI.MOD_ID, "variants of Sandstone");
-        ImpactAPI.registerChannelItem("sandstone", ImpactAPI.MOD_ID, 1, new ItemStack(Blocks.sandstone));
-        ImpactAPI
-                .registerChannelItem("sandstone", ImpactAPI.MOD_ID, 2, new ItemStack(Blocks.sandstone, 1, 1));
-        ImpactAPI
-                .registerChannelItem("sandstone", ImpactAPI.MOD_ID, 3, new ItemStack(Blocks.sandstone, 1, 2));
-        ImpactAPI.registerChannelDescription("sandbricks", ImpactAPI.MOD_ID, "variants of Sandbricks");
-        ImpactAPI.registerChannelDescription("apple", ImpactAPI.MOD_ID, "apple");
-        ImpactAPI.registerChannelDescription("bright", ImpactAPI.MOD_ID, "bright");
-        ImpactAPI.registerChannelDescription("apple_blight", ImpactAPI.MOD_ID, "apple_blight");
-        ImpactAPI.registerChannelDescription("app_eagle", ImpactAPI.MOD_ID, "app_eagle");
+        ImpactStructures.registerChannelDescription("sandstone", ImpactStructures.MOD_ID, "variants of Sandstone");
+        ImpactStructures.registerChannelItem("sandstone", ImpactStructures.MOD_ID, 1, new ItemStack(Blocks.sandstone));
+        ImpactStructures
+                .registerChannelItem("sandstone", ImpactStructures.MOD_ID, 2, new ItemStack(Blocks.sandstone, 1, 1));
+        ImpactStructures
+                .registerChannelItem("sandstone", ImpactStructures.MOD_ID, 3, new ItemStack(Blocks.sandstone, 1, 2));
+        ImpactStructures.registerChannelDescription("sandbricks", ImpactStructures.MOD_ID, "variants of Sandbricks");
+        ImpactStructures.registerChannelDescription("apple", ImpactStructures.MOD_ID, "apple");
+        ImpactStructures.registerChannelDescription("bright", ImpactStructures.MOD_ID, "bright");
+        ImpactStructures.registerChannelDescription("apple_blight", ImpactStructures.MOD_ID, "apple_blight");
+        ImpactStructures.registerChannelDescription("app_eagle", ImpactStructures.MOD_ID, "app_eagle");
     }
 
     public void x() {

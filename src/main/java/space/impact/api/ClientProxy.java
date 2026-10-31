@@ -390,7 +390,7 @@ public class ClientProxy extends CommonProxy {
         GuiConfig guiConfig = new GuiConfig(
                 null,
                 element.getChildElements(),
-                ImpactAPI.MOD_ID,
+                ImpactStructures.MOD_ID,
                 null,
                 false,
                 false,
@@ -680,7 +680,7 @@ public class ClientProxy extends CommonProxy {
 
         @SubscribeEvent(priority = EventPriority.LOWEST)
         public void onConfigChange(ConfigChangedEvent.PostConfigChangedEvent e) {
-            if (connected && e.modID.equals(ImpactAPI.MOD_ID)) {
+            if (connected && e.modID.equals(ImpactStructures.MOD_ID)) {
                 configSent = false;
                 sendRegistryOrderToServer();
             }

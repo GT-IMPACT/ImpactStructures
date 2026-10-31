@@ -5,7 +5,7 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 import net.minecraft.util.IIcon
 import net.minecraft.world.World
-import space.impact.api.ImpactAPI
+import space.impact.api.ImpactStructures
 import space.impact.api.hint.HintColor
 import space.impact.api.hint.HintMarkerKind
 
@@ -15,7 +15,7 @@ public fun World.showHint(
     worldZ: Int,
     color: HintColor,
 ) {
-    ImpactAPI.hintParticle(
+    ImpactStructures.hintParticle(
         this,
         worldX,
         worldY,
@@ -32,7 +32,7 @@ public fun World.showHint(
     icons: Array<out IIcon?>,
     displayStack: ItemStack? = null,
 ) {
-    ImpactAPI.hintParticle(
+    ImpactStructures.hintParticle(
         this,
         worldX,
         worldY,
@@ -48,7 +48,7 @@ public fun World.showMarker(
     worldZ: Int,
     kind: HintMarkerKind,
 ) {
-    ImpactAPI.hintMarker(
+    ImpactStructures.hintMarker(
         this,
         worldX,
         worldY,
@@ -65,7 +65,7 @@ public fun World.showTintedHint(
     tint: ShortArray,
     displayStack: ItemStack? = null,
 ) {
-    ImpactAPI.hintParticleTinted(
+    ImpactStructures.hintParticleTinted(
         this,
         worldX,
         worldY,
@@ -83,12 +83,12 @@ public fun World.showTintedHint(
     color: HintColor,
     tint: ShortArray,
 ) {
-    ImpactAPI.hintParticleTinted(
+    ImpactStructures.hintParticleTinted(
         this,
         worldX,
         worldY,
         worldZ,
-        ImpactAPI.getBlockHint(),
+        ImpactStructures.getBlockHint(),
         color.metadata,
         tint,
     )
@@ -102,7 +102,7 @@ public fun World.showTintedHint(
     metadata: Int,
     tint: ShortArray,
 ) {
-    ImpactAPI.hintParticleTinted(
+    ImpactStructures.hintParticleTinted(
         this,
         worldX,
         worldY,
@@ -118,7 +118,7 @@ public fun EntityPlayer.markHintError(
     worldY: Int,
     worldZ: Int,
 ): Boolean {
-    return ImpactAPI.markHintParticleError(
+    return ImpactStructures.markHintParticleError(
         this,
         worldObj,
         worldX,
@@ -133,7 +133,7 @@ public fun EntityPlayer.updateHintTint(
     worldZ: Int,
     tint: ShortArray,
 ): Boolean {
-    return ImpactAPI.updateHintParticleTint(
+    return ImpactStructures.updateHintParticleTint(
         this,
         worldObj,
         worldX,

@@ -150,7 +150,7 @@ public enum ConfigurationHandler {
     @SubscribeEvent
     @SideOnly(Side.CLIENT)
     public void onConfigChange(ConfigChangedEvent.PostConfigChangedEvent e) {
-        if (e.modID.equals(ImpactAPI.MOD_ID)) {
+        if (e.modID.equals(ImpactStructures.MOD_ID)) {
             loadConfig();
         }
     }

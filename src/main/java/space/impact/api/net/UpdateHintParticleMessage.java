@@ -3,7 +3,7 @@ package space.impact.api.net;
 import static space.impact.api.Main.LOGGER;
 
 import space.impact.api.Main;
-import space.impact.api.ImpactAPI;
+import space.impact.api.ImpactStructures;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -69,9 +69,9 @@ public class UpdateHintParticleMessage implements IMessage {
                 if (player == null || player.worldObj == null || player.worldObj.provider.dimensionId != msg.dimension
                         || msg.y < 0 || msg.y >= 256 || Math.abs((long) msg.x) > 30000000
                         || Math.abs((long) msg.z) > 30000000) return;
-                boolean updated = ImpactAPI.updateHintParticleTint(player, player.worldObj,
+                boolean updated = ImpactStructures.updateHintParticleTint(player, player.worldObj,
                         msg.x, msg.y, msg.z, new short[] { msg.r, msg.g, msg.b, msg.a });
-                if (ImpactAPI.isDebugEnabled()) LOGGER.debug("Updated hint at ({}, {}, {}): {}", msg.x, msg.y, msg.z, updated);
+                if (ImpactStructures.isDebugEnabled()) LOGGER.debug("Updated hint at ({}, {}, {}): {}", msg.x, msg.y, msg.z, updated);
             });
             return null;
         }

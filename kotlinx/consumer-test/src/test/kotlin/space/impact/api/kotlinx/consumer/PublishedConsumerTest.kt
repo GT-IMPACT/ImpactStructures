@@ -3,7 +3,7 @@ package space.impact.api.kotlinx.consumer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
-import space.impact.api.ImpactAPI
+import space.impact.api.ImpactStructures
 import space.impact.api.kotlinx.execution.withInstrumentation
 
 internal class PublishedConsumerTest {
@@ -29,6 +29,6 @@ internal class PublishedConsumerTest {
             "completed",
             value,
         )
-        assertFalse(ImpactAPI.isInstrumentEnabled())
+        assertFalse(ImpactStructures.isInstrumentEnabled())
     }
 }

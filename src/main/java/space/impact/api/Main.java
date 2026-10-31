@@ -1,7 +1,7 @@
 package space.impact.api;
 
-import static space.impact.api.ImpactAPI.CHANNEL_SHOW_ERROR;
-import static space.impact.api.ImpactAPI.MOD_ID;
+import static space.impact.api.ImpactStructures.CHANNEL_SHOW_ERROR;
+import static space.impact.api.ImpactStructures.MOD_ID;
 import static space.impact.impactapi.BuildConfigKt.MODNAME;
 import static space.impact.impactapi.BuildConfigKt.VERSION;
 
@@ -118,7 +118,7 @@ public class Main {
         @Override
         @SideOnly(Side.CLIENT)
         public Item getTabIconItem() {
-            return ImpactAPI.getItemBlockHint();
+            return ImpactStructures.getItemBlockHint();
         }
     };
 
@@ -128,7 +128,7 @@ public class Main {
         GameRegistry.registerBlock(blockHint = new BlockHint(), ItemBlockHint.class, "blockhint");
         GameRegistry.registerBlock(constructionPlaceholder = new ConstructionPlaceholderBlock(),
                 "construction_placeholder");
-        itemBlockHint = ItemBlock.getItemFromBlock(ImpactAPI.getBlockHint());
+        itemBlockHint = ItemBlock.getItemFromBlock(ImpactStructures.getBlockHint());
         GameRegistry.registerItem(
                 itemFrontRotationTool = new ItemFrontRotationTool(),
                 itemFrontRotationTool.getUnlocalizedName());
@@ -185,7 +185,7 @@ public class Main {
         NBTTagList tags = message.getNBTValue().getTagList("Channels", Constants.NBT.TAG_COMPOUND);
         for (int i = 0; i < tags.tagCount(); i++) {
             NBTTagCompound tag = tags.getCompoundTagAt(i);
-            ImpactAPI.registerChannelDescription(
+            ImpactStructures.registerChannelDescription(
                     tag.getString("Channel"),
                     message.getSender(),
                     tag.getString("Description"));
@@ -200,7 +200,7 @@ public class Main {
             NBTTagList tags = itemTag.getTagList("Channels", Constants.NBT.TAG_COMPOUND);
             for (int j = 0; j < tags.tagCount(); j++) {
                 NBTTagCompound tag = tags.getCompoundTagAt(j);
-                ImpactAPI.registerChannelItem(
+                ImpactStructures.registerChannelItem(
                         tag.getString("Channel"),
                         message.getSender(),
                         tag.getInteger("Value"),

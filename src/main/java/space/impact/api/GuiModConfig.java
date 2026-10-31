@@ -16,7 +16,7 @@ public class GuiModConfig extends GuiConfig {
         super(
                 guiScreen,
                 getConfigElements(),
-                ImpactAPI.MOD_ID,
+                ImpactStructures.MOD_ID,
                 false,
                 false,
                 GuiConfig.getAbridgedConfigPath(ConfigurationHandler.INSTANCE.getConfig().toString()));

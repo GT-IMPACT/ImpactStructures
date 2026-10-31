@@ -15,7 +15,6 @@ import net.minecraftforge.common.util.Constants.NBT;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
-import space.impact.api.ImpactAPI;
 
 /**
  * Provide accessor methods for channel data from trigger item.

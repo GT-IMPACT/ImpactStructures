@@ -26,7 +26,7 @@ import cpw.mods.fml.common.network.NetworkRegistry;
  * Public API for IMPACT structure definitions, alignment and holograms.
  * Colored hints and service markers are independent.
  */
-public class ImpactAPI {
+public class ImpactStructures {
 
     public static final String MOD_ID = "impactapi";
     public static final String CHANNEL_SHOW_ERROR = "show_error";

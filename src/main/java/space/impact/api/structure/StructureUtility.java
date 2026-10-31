@@ -53,7 +53,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import com.google.common.collect.ImmutableList;
 import space.impact.api.StructureEvent.StructureElementVisitedEvent;
 import space.impact.api.Main;
-import space.impact.api.ImpactAPI;
+import space.impact.api.ImpactStructures;
 import space.impact.api.hint.HintColor;
 import space.impact.api.hint.HintMarkerKind;
 import space.impact.api.alignment.constructable.ChannelDataAccessor;
@@ -171,7 +171,7 @@ public class StructureUtility {
 
         @Override
         public boolean spawnHint(Object o, World world, int x, int y, int z, ItemStack trigger) {
-            ImpactAPI.hintMarker(world, x, y, z, HintMarkerKind.AIR);
+            ImpactStructures.hintMarker(world, x, y, z, HintMarkerKind.AIR);
             return true;
         }
 
@@ -186,7 +186,7 @@ public class StructureUtility {
         public PlaceResult survivalPlaceBlock(Object o, World world, int x, int y, int z, ItemStack trigger,
                 AutoPlaceEnvironment env) {
             if (check(o, world, x, y, z)) return PlaceResult.SKIP;
-            if (!ImpactAPI.isBlockTriviallyReplaceable(world, x, y, z, env.getActor())) return PlaceResult.REJECT;
+            if (!ImpactStructures.isBlockTriviallyReplaceable(world, x, y, z, env.getActor())) return PlaceResult.REJECT;
             world.setBlock(x, y, z, Blocks.air, 0, 2);
             return PlaceResult.ACCEPT;
         }
@@ -207,13 +207,13 @@ public class StructureUtility {
 
         @Override
         public boolean spawnHint(Object o, World world, int x, int y, int z, ItemStack trigger) {
-            ImpactAPI.hintMarker(world, x, y, z, HintMarkerKind.NOT_AIR);
+            ImpactStructures.hintMarker(world, x, y, z, HintMarkerKind.NOT_AIR);
             return true;
         }
 
         @Override
         public boolean placeBlock(Object o, World world, int x, int y, int z, ItemStack trigger) {
-            world.setBlock(x, y, z, ImpactAPI.getConstructionPlaceholder(), 0, 2);
+            world.setBlock(x, y, z, ImpactStructures.getConstructionPlaceholder(), 0, 2);
             return true;
         }
 
@@ -250,7 +250,7 @@ public class StructureUtility {
 
         @Override
         public boolean spawnHint(Object o, World world, int x, int y, int z, ItemStack trigger) {
-            ImpactAPI.hintMarker(world, x, y, z, HintMarkerKind.ERROR);
+            ImpactStructures.hintMarker(world, x, y, z, HintMarkerKind.ERROR);
             return true;
         }
 
@@ -355,7 +355,7 @@ public class StructureUtility {
     public static PlaceResult survivalPlaceBlock(Block block, int meta, World world, int x, int y, int z, IItemSource s,
             EntityPlayer actor, Consumer<IChatComponent> chatter) {
         if (block == null) throw new NullPointerException();
-        if (!ImpactAPI.isBlockTriviallyReplaceable(world, x, y, z, actor)) return PlaceResult.REJECT;
+        if (!ImpactStructures.isBlockTriviallyReplaceable(world, x, y, z, actor)) return PlaceResult.REJECT;
         Item itemBlock = Item.getItemFromBlock(block);
         int itemMeta = itemBlock instanceof ISpecialItemBlock
                 ? ((ISpecialItemBlock) itemBlock).getItemMetaFromBlockMeta(block, meta)
@@ -468,7 +468,7 @@ public class StructureUtility {
         if (stack == null) throw new NullPointerException();
         if (stack.stackSize != 1) throw new IllegalArgumentException();
         if (!(stack.getItem() instanceof ItemBlock)) throw new IllegalArgumentException();
-        if (!ImpactAPI.isBlockTriviallyReplaceable(world, x, y, z, actor)) return PlaceResult.REJECT;
+        if (!ImpactStructures.isBlockTriviallyReplaceable(world, x, y, z, actor)) return PlaceResult.REJECT;
         if (!assumeStackPresent && !s.takeOne(stack, true)) {
             if (chatter != null) chatter.accept(
                     new ChatComponentTranslation("impactapi.autoplace.missing_block", getStackChatName(stack)));
@@ -539,7 +539,7 @@ public class StructureUtility {
 
             @Override
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                ImpactAPI.hintParticle(world, x, y, z, ImpactAPI.getBlockHint(), meta);
+                ImpactStructures.hintParticle(world, x, y, z, ImpactStructures.getBlockHint(), meta);
                 return false;
             }
         };
@@ -564,7 +564,7 @@ public class StructureUtility {
 
             @Override
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                ImpactAPI.hintParticle(world, x, y, z, icons.get());
+                ImpactStructures.hintParticle(world, x, y, z, icons.get());
                 return false;
             }
         };
@@ -589,7 +589,7 @@ public class StructureUtility {
 
             @Override
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                ImpactAPI.hintParticleTinted(world, x, y, z, icons.get(), RGBa);
+                ImpactStructures.hintParticleTinted(world, x, y, z, icons.get(), RGBa);
                 return false;
             }
         };
@@ -791,7 +791,7 @@ public class StructureUtility {
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
                 Pair<Block, Integer> hint = getHint(trigger);
                 if (hint == null) return false;
-                ImpactAPI.hintParticle(world, x, y, z, hint.getKey(), hint.getValue());
+                ImpactStructures.hintParticle(world, x, y, z, hint.getKey(), hint.getValue());
                 return true;
             }
 
@@ -910,7 +910,7 @@ public class StructureUtility {
             @Override
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
                 if (getBlock() == null) return error().spawnHint(t, world, x, y, z, trigger);
-                ImpactAPI.hintParticle(world, x, y, z, getBlock(), meta);
+                ImpactStructures.hintParticle(world, x, y, z, getBlock(), meta);
                 return true;
             }
 
@@ -994,7 +994,7 @@ public class StructureUtility {
             @Override
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
                 if (init()) {
-                    ImpactAPI.hintParticle(world, x, y, z, block, meta);
+                    ImpactStructures.hintParticle(world, x, y, z, block, meta);
                     return true;
                 } else return fallback.spawnHint(t, world, x, y, z, trigger);
             }
@@ -1074,7 +1074,7 @@ public class StructureUtility {
 
             @Override
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                ImpactAPI.hintParticle(world, x, y, z, hintBlock, hintMeta);
+                ImpactStructures.hintParticle(world, x, y, z, hintBlock, hintMeta);
                 return true;
             }
         };
@@ -1116,7 +1116,7 @@ public class StructureUtility {
 
             @Override
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                ImpactAPI.hintParticle(world, x, y, z, hintBlock, hintMeta);
+                ImpactStructures.hintParticle(world, x, y, z, hintBlock, hintMeta);
                 return true;
             }
         };
@@ -1145,7 +1145,7 @@ public class StructureUtility {
 
             @Override
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                ImpactAPI.hintParticle(world, x, y, z, hintBlock, hintMeta);
+                ImpactStructures.hintParticle(world, x, y, z, hintBlock, hintMeta);
                 return true;
             }
         };
@@ -1186,7 +1186,7 @@ public class StructureUtility {
 
             @Override
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                ImpactAPI.hintParticle(world, x, y, z, hintBlock, hintMeta);
+                ImpactStructures.hintParticle(world, x, y, z, hintBlock, hintMeta);
                 return true;
             }
         };
@@ -1230,7 +1230,7 @@ public class StructureUtility {
 
                 @Override
                 public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                    ImpactAPI.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
+                    ImpactStructures.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
                     return true;
                 }
 
@@ -1279,7 +1279,7 @@ public class StructureUtility {
 
                 @Override
                 public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                    ImpactAPI.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
+                    ImpactStructures.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
                     return true;
                 }
 
@@ -1349,7 +1349,7 @@ public class StructureUtility {
 
                 @Override
                 public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                    ImpactAPI.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
+                    ImpactStructures.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
                     return true;
                 }
 
@@ -1399,7 +1399,7 @@ public class StructureUtility {
 
                 @Override
                 public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                    ImpactAPI.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
+                    ImpactStructures.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
                     return true;
                 }
 
@@ -1469,7 +1469,7 @@ public class StructureUtility {
 
                 @Override
                 public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                    ImpactAPI.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
+                    ImpactStructures.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
                     return true;
                 }
 
@@ -1556,7 +1556,7 @@ public class StructureUtility {
 
                 @Override
                 public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                    ImpactAPI.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
+                    ImpactStructures.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
                     return true;
                 }
 
@@ -1605,7 +1605,7 @@ public class StructureUtility {
 
                 @Override
                 public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                    ImpactAPI.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
+                    ImpactStructures.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
                     return true;
                 }
 
@@ -1645,7 +1645,7 @@ public class StructureUtility {
 
                 @Override
                 public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                    ImpactAPI.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
+                    ImpactStructures.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
                     return true;
                 }
 
@@ -1726,7 +1726,7 @@ public class StructureUtility {
 
                 @Override
                 public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                    ImpactAPI.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
+                    ImpactStructures.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
                     return true;
                 }
 
@@ -1772,7 +1772,7 @@ public class StructureUtility {
 
                 @Override
                 public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                    ImpactAPI.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
+                    ImpactStructures.hintParticle(world, x, y, z, defaultBlock, defaultMeta);
                     return true;
                 }
 
@@ -1798,7 +1798,7 @@ public class StructureUtility {
     }
 
     public static <T> IStructureElement<T> ofBlockAdder(IBlockAdder<T> iBlockAdder, HintColor color) {
-        return ofBlockAdder(iBlockAdder, ImpactAPI.getBlockHint(), Objects.requireNonNull(color, "color").getMetadata());
+        return ofBlockAdder(iBlockAdder, ImpactStructures.getBlockHint(), Objects.requireNonNull(color, "color").getMetadata());
     }
 
     /**
@@ -1828,7 +1828,7 @@ public class StructureUtility {
 
             @Override
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                ImpactAPI.hintParticle(world, x, y, z, hintBlock, hintMeta);
+                ImpactStructures.hintParticle(world, x, y, z, hintBlock, hintMeta);
                 return true;
             }
         };
@@ -1861,7 +1861,7 @@ public class StructureUtility {
 
             @Override
             public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
-                ImpactAPI.hintParticle(world, x, y, z, hintBlock, hintMeta);
+                ImpactStructures.hintParticle(world, x, y, z, hintBlock, hintMeta);
                 return true;
             }
         };
@@ -3033,7 +3033,7 @@ public class StructureUtility {
             private void warnNoExplicitSubChannel(EntityPlayer currentPlayer) {
                 // throttle this warning a bit.
                 // I'm sure we can finish a check/autoplace round within 100 milliseconds.
-                ImpactAPI.addThrottledChat(
+                ImpactStructures.addThrottledChat(
                         new ChatThrottleKey.NoExplicitChannel(channel),
                         currentPlayer,
                         new ChatComponentTranslation("impactapi.autoplace.warning.no_explicit_channel", channel),
@@ -3391,7 +3391,7 @@ public class StructureUtility {
                 xyz[1] += basePositionY;
                 xyz[2] += basePositionZ;
 
-                if (ImpactAPI.isDebugEnabled()) Main.LOGGER.info(
+                if (ImpactStructures.isDebugEnabled()) Main.LOGGER.info(
                         "Multi [{}, {}, {}] {} step @ {} {}",
                         basePositionX,
                         basePositionY,
@@ -3401,7 +3401,7 @@ public class StructureUtility {
                         Arrays.toString(abc));
 
                 if (world.blockExists(xyz[0], xyz[1], xyz[2])) {
-                    if (ImpactAPI.isInstrumentEnabled()) {
+                    if (ImpactStructures.isInstrumentEnabled()) {
                         StructureElementVisitedEvent.fireEvent(
                                 world,
                                 xyz[0],
@@ -3413,7 +3413,7 @@ public class StructureUtility {
                                 element);
                     }
                     if (!predicate.visit(element, world, xyz[0], xyz[1], xyz[2], abc[0], abc[1], abc[2])) {
-                        if (ImpactAPI.isDebugEnabled()) {
+                        if (ImpactStructures.isDebugEnabled()) {
                             Main.LOGGER.info(
                                     "Multi [{}, {}, {}] {} stop @ {} {}",
                                     basePositionX,
@@ -3426,7 +3426,7 @@ public class StructureUtility {
                         return false;
                     }
                 } else {
-                    if (ImpactAPI.isDebugEnabled()) {
+                    if (ImpactStructures.isDebugEnabled()) {
                         Main.LOGGER.info(
                                 "Multi [{}, {}, {}] {} !blockExists @ {} {}",
                                 basePositionX,

@@ -12,7 +12,7 @@ import net.minecraft.util.IIcon;
 import net.minecraft.world.IBlockAccess;
 
 import space.impact.api.Main;
-import space.impact.api.ImpactAPI;
+import space.impact.api.ImpactStructures;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -30,7 +30,7 @@ public class BlockHint extends Block {
     @Override
     public void registerBlockIcons(IIconRegister aIconRegister) {
         for (int metadata = 0; metadata < hint.length; metadata++) {
-            hint[metadata] = aIconRegister.registerIcon(ImpactAPI.MOD_ID + ":" + (metadata + 1));
+            hint[metadata] = aIconRegister.registerIcon(ImpactStructures.MOD_ID + ":" + (metadata + 1));
         }
     }
 

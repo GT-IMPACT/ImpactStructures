@@ -1,6 +1,6 @@
 # Impact Structures
 
-[![Latest Release](https://img.shields.io/github/v/tag/GT-IMPACT/ImpactAPI?label=Latest&sort=semver)](https://github.com/GT-IMPACT/ImpactAPI/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/tag/GT-IMPACT/ImpactStructures?label=Latest&sort=semver)](https://github.com/GT-IMPACT/ImpactStructures/releases/latest)
 
 Библиотека мультиблочных структур для Minecraft 1.7.10 и Forge 10.13.4.1614.
 Идентификатор мода — `impactapi`.
@@ -13,6 +13,8 @@
 | --- | --- |
 | Java API | `space.impact:ImpactStructures:<version>` |
 | KotlinX | `space.impact:ImpactStructures-Ktx:<version>` |
+
+Основной класс Java API — `space.impact.api.ImpactStructures`.
 
 KotlinX добавляет Kotlin DSL и extensions поверх Java API. Версии обоих артефактов
 должны совпадать. [Подключение и примеры](docs/kotlinx.md).

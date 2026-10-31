@@ -13,7 +13,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import space.impact.api.ConfigurationHandler;
 import space.impact.api.Main;
-import space.impact.api.ImpactAPI;
+import space.impact.api.ImpactStructures;
 import space.impact.api.alignment.IAlignment;
 import space.impact.api.alignment.IAlignmentProvider;
 import space.impact.api.alignment.enumerable.ExtendedFacing;
@@ -30,11 +30,11 @@ public class ConstructableUtility {
 
     public static boolean handle(ItemStack aStack, EntityPlayer aPlayer, World aWorld, int aX, int aY, int aZ,
             int aSide) {
-        ImpactAPI.startHinting(aWorld);
+        ImpactStructures.startHinting(aWorld);
         try {
             return handle0(aStack, aPlayer, aWorld, aX, aY, aZ, aSide);
         } finally {
-            ImpactAPI.endHinting(aWorld);
+            ImpactStructures.endHinting(aWorld);
         }
     }
 

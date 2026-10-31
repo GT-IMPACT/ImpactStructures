@@ -1,6 +1,6 @@
 package space.impact.api.item;
 
-import static space.impact.api.ImpactAPI.MOD_ID;
+import static space.impact.api.ImpactStructures.MOD_ID;
 import static net.minecraft.util.EnumChatFormatting.BLUE;
 import static net.minecraft.util.StatCollector.translateToLocal;
 import static net.minecraft.util.StatCollector.translateToLocalFormatted;

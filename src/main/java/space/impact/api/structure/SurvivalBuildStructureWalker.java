@@ -3,7 +3,7 @@ package space.impact.api.structure;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 
-import space.impact.api.ImpactAPI;
+import space.impact.api.ImpactStructures;
 import space.impact.api.alignment.enumerable.ExtendedFacing;
 import space.impact.api.structure.IStructureElement.PlaceResult;
 
@@ -52,7 +52,7 @@ class SurvivalBuildStructureWalker<T> implements IStructureWalker<T> {
                 if (check) element.check(object, world, x, y, z);
                 return ++built < elementBudget;
             case REJECT:
-                ImpactAPI.markHintParticleError(params.getActor(), world, x, y, z);
+                ImpactStructures.markHintParticleError(params.getActor(), world, x, y, z);
                 return false;
             case ACCEPT_STOP:
                 if (check) element.check(object, world, x, y, z);

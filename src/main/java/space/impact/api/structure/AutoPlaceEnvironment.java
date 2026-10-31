@@ -104,7 +104,7 @@ public class AutoPlaceEnvironment {
     /**
      * The initiator of actions. for very critical errors you can also just send the error messages here, bypassing any
      * filter that {@link #getChatter()} might have. You might want to use
-     * {@link space.impact.api.ImpactAPI#addThrottledChat(Object, EntityPlayer, IChatComponent, short)}
+     * {@link space.impact.api.ImpactStructures#addThrottledChat(Object, EntityPlayer, IChatComponent, short)}
      * to help reduce spam.
      */
     public EntityPlayer getActor() {

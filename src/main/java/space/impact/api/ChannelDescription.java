@@ -16,7 +16,7 @@ import space.impact.api.util.ItemStackMap;
 
 import cpw.mods.fml.common.Loader;
 
-// this is not an API! go check ImpactAPI instead!
+// this is not an API! go check ImpactStructures instead!
 public class ChannelDescription {
 
     private static final ItemStackMap<Set<ChannelDescription>> itemToChannels = new ItemStackMap<>(true);

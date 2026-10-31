@@ -10,7 +10,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.IChatComponent;
 import net.minecraft.world.World;
 
-import space.impact.api.ImpactAPI;
+import space.impact.api.ImpactStructures;
 import space.impact.api.hint.HintColor;
 
 /** Rendering-only decorator; every structure operation stays with the original element. */
@@ -37,7 +37,7 @@ final class HintedStructureElement<T> implements IStructureElement<T> {
     @Override
     public boolean spawnHint(T context, World world, int x, int y, int z, ItemStack trigger) {
         boolean spawned = element.spawnHint(context, world, x, y, z, trigger);
-        if (world != null && world.isRemote) ImpactAPI.hintFrame(world, x, y, z, color);
+        if (world != null && world.isRemote) ImpactStructures.hintFrame(world, x, y, z, color);
         return spawned;
     }
 

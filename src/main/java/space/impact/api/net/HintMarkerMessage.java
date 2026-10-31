@@ -5,7 +5,7 @@ import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.player.EntityPlayer;
-import space.impact.api.ImpactAPI;
+import space.impact.api.ImpactStructures;
 import space.impact.api.Main;
 import space.impact.api.hint.HintMarkerKind;
 
@@ -54,7 +54,7 @@ public class HintMarkerMessage implements IMessage {
                 if (player == null || player.worldObj == null || player.worldObj.provider.dimensionId != msg.dimension
                         || msg.y < 0 || msg.y >= 256 || Math.abs((long) msg.x) > 30000000
                         || Math.abs((long) msg.z) > 30000000) return;
-                ImpactAPI.hintMarker(player.worldObj, msg.x, msg.y, msg.z, msg.kind);
+                ImpactStructures.hintMarker(player.worldObj, msg.x, msg.y, msg.z, msg.kind);
             });
             return null;
         }

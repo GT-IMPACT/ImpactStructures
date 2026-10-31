@@ -1,7 +1,7 @@
 package space.impact.api.kotlinx.hint
 
 import net.minecraft.world.World
-import space.impact.api.ImpactAPI
+import space.impact.api.ImpactStructures
 import space.impact.api.kotlinx.execution.runLifecycleScope
 
 /** Keep one hologram batch together and close it even when projection fails. */
@@ -11,10 +11,10 @@ public fun <R> withHinting(
 ): R {
     return runLifecycleScope(
         start = {
-            ImpactAPI.startHinting(world)
+            ImpactStructures.startHinting(world)
         },
         finish = {
-            ImpactAPI.endHinting(world)
+            ImpactStructures.endHinting(world)
         },
         block = block,
     )

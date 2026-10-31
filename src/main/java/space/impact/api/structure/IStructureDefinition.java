@@ -13,7 +13,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 
 import space.impact.api.Main;
-import space.impact.api.ImpactAPI;
+import space.impact.api.ImpactStructures;
 import space.impact.api.alignment.constructable.ChannelDataAccessor;
 import space.impact.api.alignment.constructable.ISurvivalConstructable;
 import space.impact.api.alignment.enumerable.ExtendedFacing;
@@ -438,7 +438,7 @@ public interface IStructureDefinition<T> {
                         skipBlockUnloaded((e, w, x, y, z, a, b, c) -> e.check(object, w, x, y, z)),
                         "check force");
             }
-            if (ImpactAPI.isDebugEnabled() && success) {
+            if (ImpactStructures.isDebugEnabled() && success) {
                 Main.LOGGER
                         .info("Multi [" + basePositionX + ", " + basePositionY + ", " + basePositionZ + "] pass");
             }
@@ -457,9 +457,9 @@ public interface IStructureDefinition<T> {
                         basePositionC,
                         ignoreBlockUnloaded((e, w, x, y, z, a, b, c) -> {
                             e.spawnHint(object, world, x, y, z, trigger);
-                            if (ChannelDataAccessor.hasSubChannel(trigger, ImpactAPI.CHANNEL_SHOW_ERROR)
+                            if (ChannelDataAccessor.hasSubChannel(trigger, ImpactStructures.CHANNEL_SHOW_ERROR)
                                     && !e.couldBeValid(object, world, x, y, z, trigger)) {
-                                ImpactAPI.markHintParticleError(Main.getCurrentPlayer(), world, x, y, z);
+                                ImpactStructures.markHintParticleError(Main.getCurrentPlayer(), world, x, y, z);
                             }
                             return true;
                         }),

@@ -12,7 +12,7 @@ import cpw.mods.fml.common.eventhandler.Event;
  * the method call returns.
  * <p>
  * All of these events will be fired on the {@link net.minecraftforge.common.MinecraftForge#EVENT_BUS}, if they are
- * enabled by {@link ImpactAPI#enableInstrument(Object)}.
+ * enabled by {@link ImpactStructures#enableInstrument(Object)}.
  * <p>
  * All public stuff in this class and its enclosed classes are considered part of the public API. Backwards
  * compatibility is maintained to the maximum extend possible.
@@ -22,7 +22,7 @@ public abstract class StructureEvent extends Event {
     /*
      * In case the event is passed to another thread for processing.
      */
-    private final Object identifier = ImpactAPI.instrument.get();
+    private final Object identifier = ImpactStructures.instrument.get();
 
     StructureEvent() {}
 
@@ -53,7 +53,7 @@ public abstract class StructureEvent extends Event {
          */
         public static void fireEvent(World world, int x, int y, int z, int a, int b, int c,
                 IStructureElement<?> element) {
-            if (ImpactAPI.isInstrumentEnabled()) {
+            if (ImpactStructures.isInstrumentEnabled()) {
                 try {
                     MinecraftForge.EVENT_BUS.post(new StructureElementVisitedEvent(world, x, y, z, a, b, c, element));
                 } catch (Exception e) {

@@ -268,9 +268,9 @@ world.showTintedHint(
 Название берётся из `displayStack` с учётом metadata и NBT. Предмет копируется и не расходуется;
 текстуры и tint остаются заданными явно. Без `displayStack` сохраняется общая подпись подсказки.
 Для варианта без tint есть `world.showHint(..., icons = frameTextures, displayStack = frameStack)`.
-Java API: `ImpactAPI.hintParticleTinted(world, x, y, z, icons, tint, displayStack)` и
-`ImpactAPI.hintParticle(world, x, y, z, icons, displayStack)`.
-Добавленная через `ImpactAPI.hintFrame` цветная рамка сохраняет это название на первой строке,
+Java API: `ImpactStructures.hintParticleTinted(world, x, y, z, icons, tint, displayStack)` и
+`ImpactStructures.hintParticle(world, x, y, z, icons, displayStack)`.
+Добавленная через `ImpactStructures.hintFrame` цветная рамка сохраняет это название на первой строке,
 а название цвета — на второй; обе строки выравниваются по центру.
 
 ## Адаптация чужих контроллеров

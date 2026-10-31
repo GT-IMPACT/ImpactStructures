@@ -1,6 +1,6 @@
 package space.impact.api.kotlinx.execution
 
-import space.impact.api.ImpactAPI
+import space.impact.api.ImpactStructures
 
 /** Instrument the current thread for the duration of [block], including exceptional exits. */
 public fun <R> withInstrumentation(
@@ -9,10 +9,10 @@ public fun <R> withInstrumentation(
 ): R {
     return runLifecycleScope(
         start = {
-            ImpactAPI.enableInstrument(identifier)
+            ImpactStructures.enableInstrument(identifier)
         },
         finish = {
-            ImpactAPI.disableInstrument()
+            ImpactStructures.disableInstrument()
         },
         block = block,
     )
