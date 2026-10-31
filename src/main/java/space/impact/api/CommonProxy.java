@@ -37,9 +37,14 @@ public class CommonProxy {
 
     public void hintParticleTinted(World w, int x, int y, int z, IIcon[] icons, short[] RGBa) {}
 
+    public void hintParticleTinted(World w, int x, int y, int z, IIcon[] icons, short[] RGBa,
+            ItemStack displayStack) {}
+
     public void hintParticleTinted(World w, int x, int y, int z, Block block, int meta, short[] RGBa) {}
 
     public void hintParticle(World w, int x, int y, int z, IIcon[] icons) {}
+
+    public void hintParticle(World w, int x, int y, int z, IIcon[] icons, ItemStack displayStack) {}
 
     public void hintParticle(World w, int x, int y, int z, Block block, int meta) {}
 

@@ -119,6 +119,19 @@ public class ImpactAPI {
     }
 
     /**
+     * Draw custom textures with a tint and an item name under the crosshair.
+     *
+     * @param icons six face textures in Forge direction order; individual faces may be null
+     * @param RGBa four tint components, as in {@link #hintParticleTinted(World, int, int, int, IIcon[], short[])}
+     * @param displayStack optional item used only for the name, including metadata and NBT; copied on the client.
+     *                     Null keeps the generic hint label. Its textures are not used and it is not consumed.
+     */
+    public static void hintParticleTinted(World w, int x, int y, int z, IIcon[] icons, short[] RGBa,
+            ItemStack displayStack) {
+        proxy.hintParticleTinted(w, x, y, z, icons, RGBa, displayStack);
+    }
+
+    /**
      * Generate a new hint particle on client side at given location using textures from given block with a tint.
      *
      * @param w     World to spawn. Usually the client world.
@@ -145,6 +158,17 @@ public class ImpactAPI {
      */
     public static void hintParticle(World w, int x, int y, int z, IIcon[] icons) {
         proxy.hintParticle(w, x, y, z, icons);
+    }
+
+    /**
+     * Draw custom textures with an item name under the crosshair, independently of the textures.
+     *
+     * @param icons six face textures in Forge direction order; individual faces may be null
+     * @param displayStack optional item used only for the name, including metadata and NBT; copied on the client.
+     *                     Null keeps the generic hint label. Its textures are not used and it is not consumed.
+     */
+    public static void hintParticle(World w, int x, int y, int z, IIcon[] icons, ItemStack displayStack) {
+        proxy.hintParticle(w, x, y, z, icons, displayStack);
     }
 
     /**

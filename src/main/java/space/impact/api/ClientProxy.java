@@ -160,15 +160,22 @@ public class ClientProxy extends CommonProxy {
 
     @Override
     public void hintParticleTinted(World w, int x, int y, int z, IIcon[] icons, short[] RGBa) {
-        addHint(w, x, y, z, icons, RGBa, null, 0);
+        hintParticleTinted(w, x, y, z, icons, RGBa, null);
     }
 
-    private void addHint(World w, int x, int y, int z, IIcon[] icons, short[] RGBa, Block block, int metadata) {
+    @Override
+    public void hintParticleTinted(World w, int x, int y, int z, IIcon[] icons, short[] RGBa,
+            ItemStack displayStack) {
+        addHint(w, x, y, z, icons, RGBa, null, 0, displayStack);
+    }
+
+    private void addHint(World w, int x, int y, int z, IIcon[] icons, short[] RGBa, Block block, int metadata,
+            ItemStack displayStack) {
         if (w == null || !w.isRemote || w != Minecraft.getMinecraft().theWorld) return;
         if (icons == null || icons.length != 6 || RGBa == null || RGBa.length != 4)
             throw new IllegalArgumentException("A hint needs six face icons and four tint components");
         ensureHinting();
-        HintParticleInfo info = new HintParticleInfo(w, x, y, z, icons, RGBa, block, metadata);
+        HintParticleInfo info = new HintParticleInfo(w, x, y, z, icons, RGBa, block, metadata, displayStack);
         HintParticleInfo samePosition = getHintParticleInfo(w, x, y, z);
         if (samePosition != null && allHints.get(samePosition) == currentHints) {
             info.markerKind = samePosition.markerKind;
@@ -204,12 +211,17 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void hintParticleTinted(World w, int x, int y, int z, Block block, int meta, short[] RGBa) {
         if (w == null || !w.isRemote || w != Minecraft.getMinecraft().theWorld) return;
-        addHint(w, x, y, z, createIIconFromBlock(block, meta), RGBa, block, meta);
+        addHint(w, x, y, z, createIIconFromBlock(block, meta), RGBa, block, meta, null);
     }
 
     @Override
     public void hintParticle(World w, int x, int y, int z, IIcon[] icons) {
         hintParticleTinted(w, x, y, z, icons, RGBA_NO_TINT);
+    }
+
+    @Override
+    public void hintParticle(World w, int x, int y, int z, IIcon[] icons, ItemStack displayStack) {
+        hintParticleTinted(w, x, y, z, icons, RGBA_NO_TINT, displayStack);
     }
 
     @Override
@@ -425,6 +437,11 @@ public class ClientProxy extends CommonProxy {
         }
 
         public HintParticleInfo(World w, int x, int y, int z, IIcon[] icons, short[] tint, Block block, int metadata) {
+            this(w, x, y, z, icons, tint, block, metadata, null);
+        }
+
+        public HintParticleInfo(World w, int x, int y, int z, IIcon[] icons, short[] tint, Block block, int metadata,
+                ItemStack displayStack) {
             this.w = w;
             this.x = x;
             this.y = y;
@@ -433,6 +450,7 @@ public class ClientProxy extends CommonProxy {
             this.tint = tint == null ? null : tint.clone();
             this.block = block;
             this.metadata = metadata;
+            this.displayStack = displayStack == null ? null : displayStack.copy();
             boolean hasTexture = false;
             if (icons != null) {
                 for (IIcon icon : icons) if (icon != null) { hasTexture = true; break; }
@@ -458,16 +476,18 @@ public class ClientProxy extends CommonProxy {
         }
 
         public String getDisplayName() {
-            if (markerKind != null && (markerKind != HintMarkerKind.ERROR || !textured)) {
+            if (markerKind != null && (markerKind != HintMarkerKind.ERROR || (!textured && displayStack == null))) {
                 return I18n.format(markerKind.getTranslationKey());
             }
+            if (displayStack == null && block != null) {
+                Item item = Item.getItemFromBlock(block);
+                if (item != null) displayStack = new ItemStack(item, 1, metadata);
+            }
             String name;
-            if (block != null) {
-                if (displayStack == null) {
-                    Item item = Item.getItemFromBlock(block);
-                    if (item != null) displayStack = new ItemStack(item, 1, metadata);
-                }
-                name = displayStack == null ? block.getLocalizedName() : displayStack.getDisplayName();
+            if (displayStack != null) {
+                name = displayStack.getDisplayName();
+            } else if (block != null) {
+                name = block.getLocalizedName();
             } else {
                 name = I18n.format("impactapi.hint.unnamed");
             }
