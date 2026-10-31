@@ -4,8 +4,10 @@
 `IStructureDefinition`/`IStructureElement` и использует тот же обход, survival-строительство, каналы и голограммы.
 Существующий Java API остаётся доступен напрямую.
 
+Namespace KotlinX — `space.impact.structures.kotlinx`; Java-ядра — `space.impact.structures`.
+
 Полный пример контроллера, компилируемый вместе с тестами:
-[ExampleController.kt](../kotlinx/src/test/kotlin/space/impact/api/kotlinx/examples/ExampleController.kt).
+[ExampleController.kt](../kotlinx/src/test/kotlin/space/impact/structures/kotlinx/examples/ExampleController.kt).
 Он реализует `IConstructableProvider` и `ISurvivalConstructable`, содержит nullable tier-состояние,
 канал выбора уровня, callback подсчёта корпусов и собственный элемент стеклянного окна.
 `getStructureDefinition()` возвращает кэшированное определение, чтобы проектор обнаруживал объявленные каналы.
@@ -300,7 +302,7 @@ registerContainer<ExampleController>(
 )
 ```
 
-Компилируемый вариант — [ExampleContainer.kt](../kotlinx/src/test/kotlin/space/impact/api/kotlinx/examples/ExampleContainer.kt).
+Компилируемый вариант — [ExampleContainer.kt](../kotlinx/src/test/kotlin/space/impact/structures/kotlinx/examples/ExampleContainer.kt).
 Для собственного `ExampleController` такая регистрация избыточна: он уже реализует provider.
 Тип контейнера не ограничен TileEntity; мета-контекст GregTech также можно адаптировать на стороне GregTech.
 Lookup `containerOrNull<Context>()` возвращает nullable-контейнер, `toConstructable(context, facing)` доступен напрямую.

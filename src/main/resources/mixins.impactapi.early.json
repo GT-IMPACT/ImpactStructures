@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8.5",
-  "package": "space.impact.api.mixins.early",
+  "package": "space.impact.structures.mixins.early",
   "refmap": "mixins.impactapi.refmap.json",
   "compatibilityLevel": "JAVA_8",
   "mixins": [],

@@ -8,12 +8,12 @@ plugins {
 impactMod {
     modId.set("impactapi")
     modName.set("Impact Structures")
-    modGroup.set("space.impact")
+    modGroup.set("space.impact.structures")
     mavenGroup.set("space.impact")
     artifactId.set("ImpactStructures")
     mavenUrl.set("https://maven.accident.space/repository/maven-releases/")
     usesMixins.set(true)
-    coreModClass.set("api.mixinplugin.ImpactEarlyMixins")
+    coreModClass.set("mixinplugin.ImpactEarlyMixins")
     mixinConfigs.set(listOf("mixins.impactapi.json"))
     accessTransformers.set(listOf("impactapi_at.cfg"))
 }
@@ -23,7 +23,7 @@ val modName = impactMod.modName.get()
 val modGroup = impactMod.modGroup.get()
 
 buildConfig {
-    packageName("space.impact.$modId")
+    packageName(modGroup)
     className("BuildConfigKt")
     useJavaOutput()
     buildConfigField("String", "MODID", "\"${modId}\"")

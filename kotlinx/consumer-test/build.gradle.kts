@@ -4,7 +4,7 @@ plugins {
 
 impactMod {
     modId.set("impactapi_kotlinx_consumer")
-    modGroup.set("space.impact.api.kotlinx.consumer")
+    modGroup.set("space.impact.structures.kotlinx.consumer")
     mavenGroup.set("space.impact.test")
     usesMixins.set(false)
     coreModClass.set("")

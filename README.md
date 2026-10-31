@@ -14,7 +14,7 @@
 | Java API | `space.impact:ImpactStructures:<version>` |
 | KotlinX | `space.impact:ImpactStructures-Ktx:<version>` |
 
-Основной класс Java API — `space.impact.api.ImpactStructures`.
+Основной класс Java API — `space.impact.structures.ImpactStructures`.
 
 KotlinX добавляет Kotlin DSL и extensions поверх Java API. Версии обоих артефактов
 должны совпадать. [Подключение и примеры](docs/kotlinx.md).

@@ -1,0 +1,44 @@
+package space.impact.structures.client;
+
+import space.impact.structures.hint.HintMarkerKind;
+
+/** Shared geometry and appearance of client-side holograms. */
+public final class HintRenderStyle {
+
+    public static final double BLOCK_SIZE = 1.0;
+    public static final double FRAME_MARGIN = 0.002;
+    public static final double COLOR_FRAME_SIZE = 0.52;
+    public static final double COLOR_FRAME_THICKNESS = 0.025;
+
+    private HintRenderStyle() {}
+
+    public static double cubeSize(HintMarkerKind kind) {
+        return kind == null ? 0.5 : 0.7;
+    }
+
+    public static double cubeInset(HintMarkerKind kind) {
+        return (BLOCK_SIZE - cubeSize(kind)) / 2;
+    }
+
+    public static double displaySize(HintMarkerKind kind, boolean colorFrame) {
+        return colorFrame ? Math.max(cubeSize(kind), COLOR_FRAME_SIZE) : cubeSize(kind);
+    }
+
+    public static int markerColor(HintMarkerKind kind) {
+        switch (kind) {
+            case ERROR: return 0xFF4545;
+            case AIR: return 0x75CFFF;
+            case NOT_AIR: return 0xFFC45C;
+            case GENERIC: return 0xC8D0DC;
+            default: throw new IllegalArgumentException("Unknown marker kind: " + kind);
+        }
+    }
+
+    public static int markerOpacity(int hintOpacity) {
+        return Math.max(0, Math.min(255, hintOpacity)) / 4;
+    }
+
+    public static boolean rendersThroughBlocks(HintMarkerKind kind) {
+        return kind == HintMarkerKind.ERROR;
+    }
+}

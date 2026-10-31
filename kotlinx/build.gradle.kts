@@ -10,7 +10,7 @@ version = rootProject.version
 impactMod {
     modId.set("impactapi_ktx")
     modName.set("Impact Structures Ktx")
-    modGroup.set("space.impact.api.kotlinx")
+    modGroup.set("space.impact.structures.kotlinx")
     mavenGroup.set("space.impact")
     artifactId.set("ImpactStructures-Ktx")
     mavenUrl.set("https://maven.accident.space/repository/maven-releases/")
