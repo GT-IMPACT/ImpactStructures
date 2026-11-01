@@ -32,6 +32,11 @@ git submodule update --init --recursive
 
 Команды: `/istruct_channel` и `/istruct_registry_debug`.
 
+`runClient` по умолчанию подключает Angelica 2.2.43 и GTNHLib 0.11.52.
+Для сравнения без Angelica: `./gradlew runClient -Pangelica=false`.
+Эти моды не включаются в JAR, опубликованные зависимости или classpath сервера.
+[Рендер голограмм и проверка производительности](docs/rendering.md).
+
 Опциональные источники материалов для survival-строительства: AE2, WCT,
 AE2FluidCraft, Baubles, Forestry, Backpack и Golden Bag из Extra Utilities. Каждый адаптер включается только при
 наличии своего мода и необходимых API. [Версии, поведение и проверки](docs/integrations.md).

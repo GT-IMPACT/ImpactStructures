@@ -22,6 +22,19 @@ val modId = impactMod.modId.get()
 val modName = impactMod.modName.get()
 val modGroup = impactMod.modGroup.get()
 
+// Client renderer runtime: never add it to the server runtime or published metadata.
+val angelicaRuntime by configurations.creating {
+    isCanBeConsumed = false
+}
+val angelicaVersion = "2.2.43"
+val withAngelica = providers.gradleProperty("angelica").map(String::toBoolean).orElse(true)
+
+tasks.named<JavaExec>("runClient") {
+    if (withAngelica.get()) {
+        classpath += angelicaRuntime
+    }
+}
+
 buildConfig {
     packageName(modGroup)
     className("BuildConfigKt")
@@ -33,6 +46,13 @@ buildConfig {
 }
 
 dependencies {
+    compileOnly("com.github.GTNewHorizons:Angelica:$angelicaVersion:dev") {
+        isTransitive = false
+    }
+    angelicaRuntime("com.github.GTNewHorizons:Angelica:$angelicaVersion:dev") {
+        isTransitive = false
+    }
+    angelicaRuntime("com.github.GTNewHorizons:GTNHLib:0.11.52:dev")
     compileOnly("com.github.GTNewHorizons:Applied-Energistics-2-Unofficial:rv3-beta-1086-GTNH:dev") { isTransitive = false }
     compileOnly("com.github.GTNewHorizons:WirelessCraftingTerminal:1.12.16:dev") { isTransitive = false }
     compileOnly("com.github.GTNewHorizons:AE2FluidCraft-Rework:1.5.114-gtnh:dev") { isTransitive = false }

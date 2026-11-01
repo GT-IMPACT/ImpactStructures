@@ -4,12 +4,16 @@ import static space.impact.structures.Main.RANDOM;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -47,6 +51,7 @@ import net.minecraftforge.event.world.WorldEvent;
 import org.apache.commons.lang3.tuple.Pair;
 import org.lwjgl.opengl.GL11;
 
+import space.impact.structures.client.AngelicaCompat;
 import space.impact.structures.client.HintFrameGeometry;
 import space.impact.structures.client.HintFrameTexture;
 import space.impact.structures.client.HintRenderStyle;
@@ -61,6 +66,7 @@ import space.impact.structures.net.SetChannelDataMessage;
 import cpw.mods.fml.client.config.GuiConfig;
 import cpw.mods.fml.client.event.ConfigChangedEvent;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.event.FMLLoadCompleteEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.eventhandler.EventPriority;
@@ -91,6 +97,10 @@ public class ClientProxy extends CommonProxy {
      * 10k should be more than enough, if not a bit wasteful
      */
     private static final List<HintParticleInfo> allHintsForRender = new ArrayList<>(10000);
+    private static final List<HintParticleInfo> visibleMarkers = new ArrayList<>();
+    private static final Set<IIcon> usedTextures = Collections.newSetFromMap(new IdentityHashMap<IIcon, Boolean>());
+    private static boolean angelicaLoaded;
+    private static long lightingRevision;
     /**
      * If the diff to current player position is too great sort the allHints. Initial value is very far off below y=0
      * but not huge enough to make a NaN.
@@ -111,6 +121,8 @@ public class ClientProxy extends CommonProxy {
         allHints.clear();
         allGroups.clear();
         allHintsForRender.clear();
+        visibleMarkers.clear();
+        usedTextures.clear();
         currentHints = null;
         allHintsDirty = false;
         lastPlayerPos.yCoord = -1e30;
@@ -180,7 +192,6 @@ public class ClientProxy extends CommonProxy {
         if (samePosition != null && allHints.get(samePosition) == currentHints) {
             info.markerKind = samePosition.markerKind;
             info.frameColor = samePosition.frameColor;
-            currentHints.getHints().remove(samePosition);
         }
 
         // check and remove colliding holograms
@@ -192,7 +203,7 @@ public class ClientProxy extends CommonProxy {
             }
         }
         allHints.put(info, currentHints);
-        currentHints.getHints().add(info);
+        currentHints.hints.put(info, info);
         allHintsDirty = true;
 
         if (!info.textured) return;
@@ -244,14 +255,7 @@ public class ClientProxy extends CommonProxy {
     private static HintParticleInfo getHintParticleInfo(World w, int x, int y, int z) {
         HintParticleInfo info = new HintParticleInfo(w, x, y, z, null, null);
         HintGroup existing = allHints.get(info);
-        if (existing != null) {
-            for (HintParticleInfo hint : existing.getHints()) {
-                if (hint.equals(info)) {
-                    return hint;
-                }
-            }
-        }
-        return null;
+        return existing == null ? null : existing.hints.get(info);
     }
 
     @Override
@@ -348,11 +352,14 @@ public class ClientProxy extends CommonProxy {
 
     @Override
     public void preInit(FMLPreInitializationEvent e) {
+        angelicaLoaded = Loader.isModLoaded("angelica");
         FMLCommonHandler.instance().bus().register(new FMLEventHandler());
         MinecraftForge.EVENT_BUS.register(new ForgeEventHandler());
     }
 
     static void markTextureUsed(IIcon icon) {
+        if (!usedTextures.add(icon)) return;
+        if (angelicaLoaded) AngelicaCompat.markTextureUsed(icon);
         if (Main.COMPAT instanceof IStructureCompat)
             ((IStructureCompat) Main.COMPAT).markTextureUsed(icon);
     }
@@ -400,11 +407,12 @@ public class ClientProxy extends CommonProxy {
 
     private static class HintGroup {
 
-        private final List<HintParticleInfo> hints = new LinkedList<>();
+        // Position lookup must stay O(1) when thousands of error/color updates arrive together.
+        private final Map<HintParticleInfo, HintParticleInfo> hints = new LinkedHashMap<>();
         private int creationTime = -1;
 
-        public List<HintParticleInfo> getHints() {
-            return hints;
+        public Collection<HintParticleInfo> getHints() {
+            return hints.values();
         }
 
         public void setCreationTime(int creationTime) {
@@ -429,6 +437,9 @@ public class ClientProxy extends CommonProxy {
         private short[] tint;
         private HintMarkerKind markerKind;
         private HintColor frameColor;
+        private long lastLightingRevision = -1;
+        private int brightness;
+        private double sortDistance;
 
         private final long creationTime = System.currentTimeMillis(); // use tick time instead maybe
 
@@ -517,8 +528,7 @@ public class ClientProxy extends CommonProxy {
             double size = HintRenderStyle.cubeSize(geometryKind);
             double inset = HintRenderStyle.cubeInset(geometryKind);
 
-            int brightness = w.blockExists(x, 0, z) ? w.getLightBrightnessForSkyBlocks(x, y, z, 0) : 0;
-            tes.setBrightness(markerFill ? 0x00F000F0 : brightness);
+            tes.setBrightness(markerFill ? 0x00F000F0 : getBrightness());
 
             int opacity = ConfigurationHandler.INSTANCE.getHintTransparency();
             if (markerFill) {
@@ -545,12 +555,13 @@ public class ClientProxy extends CommonProxy {
                 boolean unobstructedPass = j == 1;
                 for (int i = 0; i < 6; i++) {
                     if (!markerFill && icons[i] == null) continue;
-                    if (!markerFill) markTextureUsed(icons[i]);
-
-                    double u = markerFill ? 0 : icons[i].getMinU();
-                    double U = markerFill ? 1 : icons[i].getMaxU();
-                    double v = markerFill ? 0 : icons[i].getMinV();
-                    double V = markerFill ? 1 : icons[i].getMaxV();
+                    IIcon icon = markerFill ? HintFrameTexture.INSTANCE : icons[i];
+                    if (j == 0) markTextureUsed(icon);
+                    // White atlas texels keep marker fills in the same batch as textured hints.
+                    double u = icon.getMinU();
+                    double U = icon.getMaxU();
+                    double v = icon.getMinV();
+                    double V = icon.getMaxV();
                     switch (i) { // {DOWN, UP, NORTH, SOUTH, WEST, EAST}
                         case 0:
                             // all these ifs is in form if ((is face unobstructed) != (is in unobstructred pass))
@@ -622,6 +633,14 @@ public class ClientProxy extends CommonProxy {
             return creationTime;
         }
 
+        private int getBrightness() {
+            if (lastLightingRevision != lightingRevision) {
+                brightness = w.blockExists(x, 0, z) ? w.getLightBrightnessForSkyBlocks(x, y, z, 0) : 0;
+                lastLightingRevision = lightingRevision;
+            }
+            return brightness;
+        }
+
         public int drawColorFrame(Tessellator tes, double eyeX, double eyeY, double eyeZ,
                 int cameraX, int cameraY, int cameraZ) {
             IIcon icon = HintFrameTexture.INSTANCE;
@@ -629,8 +648,7 @@ public class ClientProxy extends CommonProxy {
             double u = (icon.getMinU() + icon.getMaxU()) / 2;
             double v = (icon.getMinV() + icon.getMaxV()) / 2;
             int color = frameColor.getRGB();
-            int brightness = w.blockExists(x, 0, z) ? w.getLightBrightnessForSkyBlocks(x, y, z, 0) : 0;
-            tes.setBrightness(brightness);
+            tes.setBrightness(getBrightness());
             tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255,
                     ConfigurationHandler.INSTANCE.getHintTransparency());
             double localX = x - cameraX, localY = y - cameraY, localZ = z - cameraZ;
@@ -689,6 +707,7 @@ public class ClientProxy extends CommonProxy {
         @SubscribeEvent
         public void onClientTick(ClientTickEvent e) {
             if (e.phase == Phase.END) {
+                lightingRevision++;
                 Runnable task;
                 while ((task = clientTasks.poll()) != null) task.run();
             }
@@ -726,7 +745,10 @@ public class ClientProxy extends CommonProxy {
                     // only redo sort if player moved some distance
                     // default is 0.1 block
                     // if there was a full rebuild, go sort it as well
-                    allHintsForRender.sort(Comparator.comparingDouble(info -> -info.getSquareDistanceTo(playerPos)));
+                    for (HintParticleInfo hint : allHintsForRender) {
+                        hint.sortDistance = hint.getSquareDistanceTo(playerPos);
+                    }
+                    allHintsForRender.sort(Comparator.comparingDouble(info -> -info.sortDistance));
                     resetPlayerLocation();
                 }
             }
@@ -788,6 +810,7 @@ public class ClientProxy extends CommonProxy {
 
         @SubscribeEvent
         public void onRenderOverlay(RenderGameOverlayEvent.Post e) {
+            if (allHintsForRender.isEmpty()) return;
             Minecraft mc = Minecraft.getMinecraft();
             if (e.type != RenderGameOverlayEvent.ElementType.ALL || mc.thePlayer == null || mc.theWorld == null
                     || mc.currentScreen != null || mc.gameSettings.hideGUI) return;
@@ -849,6 +872,8 @@ public class ClientProxy extends CommonProxy {
                     + (entitylivingbase.posZ - entitylivingbase.lastTickPosZ) * e.partialTicks;
             int i0 = (int) d0, i1 = (int) d1, i2 = (int) d2;
             frustrum.setPosition(d0, d1, d2);
+            visibleMarkers.clear();
+            usedTextures.clear();
 
             GL11.glPushMatrix();
             GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT
@@ -865,7 +890,6 @@ public class ClientProxy extends CommonProxy {
             GL11.glDepthFunc(GL11.GL_LEQUAL);
             GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
             GL11.glPolygonOffset(-1, -1);
-            boolean textured = true;
             Minecraft.getMinecraft().renderEngine.bindTexture(TextureMap.locationBlocksTexture);
             GL11.glTranslated(-d0 + i0, -d1 + i1, -d2 + i2);
             Tessellator tes = Tessellator.instance;
@@ -874,23 +898,18 @@ public class ClientProxy extends CommonProxy {
             for (int i = 0, allHintsForRenderSize = allHintsForRender.size(); i < allHintsForRenderSize; i++) {
                 HintParticleInfo hint = allHintsForRender.get(i);
                 if (!hint.isInFrustrum(frustrum)) continue;
+                if (hint.markerKind != null) visibleMarkers.add(hint);
                 for (int pass = 0; pass < 3; pass++) {
                     if (pass == 0 && !hint.textured || pass == 1 && hint.markerKind == null
                             || pass == 2 && hint.frameColor == null) continue;
-                    boolean texturedPass = pass != 1;
                     int maxVertices = pass == 2 ? 6 * 4 * 6 : 6 * 2 * 3;
-                    // Textures and their frames share one atlas and remain adjacent in far-to-near order.
-                    if (verticesDrawn > 0 && (textured != texturedPass || verticesDrawn + maxVertices > 4096)) {
+                    // Preserve far-to-near order without flushing between textures, markers and frames.
+                    if (verticesDrawn > 0 && verticesDrawn + maxVertices > 32760) {
                         p.endStartSection("Draw");
                         tes.draw();
                         tes.startDrawing(GL11.GL_TRIANGLES);
                         verticesDrawn = 0;
                         p.endStartSection("Prepare");
-                    }
-                    if (textured != texturedPass) {
-                        if (texturedPass) GL11.glEnable(GL11.GL_TEXTURE_2D);
-                        else GL11.glDisable(GL11.GL_TEXTURE_2D);
-                        textured = texturedPass;
                     }
                     if (pass == 2) {
                         verticesDrawn += hint.drawColorFrame(tes, d0, d1, d2, i0, i1, i2);
@@ -906,11 +925,12 @@ public class ClientProxy extends CommonProxy {
 
             GL11.glPopAttrib();
             GL11.glPopMatrix();
-            drawServiceMarkers(frustrum, d0, d1, d2);
+            drawServiceMarkers(d0, d1, d2);
             p.endSection();
         }
 
-        private static void drawServiceMarkers(Frustrum frustrum, double eyeX, double eyeY, double eyeZ) {
+        private static void drawServiceMarkers(double eyeX, double eyeY, double eyeZ) {
+            if (visibleMarkers.isEmpty()) return;
             GL11.glPushMatrix();
             GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT
                     | GL11.GL_LINE_BIT | GL11.GL_CURRENT_BIT);
@@ -931,8 +951,8 @@ public class ClientProxy extends CommonProxy {
             GL11.glLineStipple(1, (short) 0x0F0F);
             GL11.glLineWidth(1.5F);
             tes.startDrawing(GL11.GL_LINES);
-            for (HintParticleInfo hint : allHintsForRender) {
-                if (!hint.rendersThroughBlocks() || !hint.isInFrustrum(frustrum)) continue;
+            for (HintParticleInfo hint : visibleMarkers) {
+                if (!hint.rendersThroughBlocks()) continue;
                 int color = HintRenderStyle.markerColor(hint.markerKind);
                 tes.setBrightness(0x00F000F0);
                 tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255, 140);
@@ -945,8 +965,7 @@ public class ClientProxy extends CommonProxy {
             for (int pass = 0; pass < 2; pass++) {
                 GL11.glLineWidth(pass == 0 ? 3 : 1);
                 tes.startDrawing(GL11.GL_LINES);
-                for (HintParticleInfo hint : allHintsForRender) {
-                    if (hint.markerKind == null || !hint.isInFrustrum(frustrum)) continue;
+                for (HintParticleInfo hint : visibleMarkers) {
                     int color = pass == 0 ? 0x141414 : HintRenderStyle.markerColor(hint.markerKind);
                     tes.setBrightness(0x00F000F0);
                     tes.setColorRGBA(color >> 16 & 255, color >> 8 & 255, color & 255, 230);
