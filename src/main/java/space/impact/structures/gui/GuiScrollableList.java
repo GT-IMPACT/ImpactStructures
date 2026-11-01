@@ -86,6 +86,15 @@ public abstract class GuiScrollableList<T> {
         return getElementAt(selectedIndex);
     }
 
+    /** Resolve a click before a text field loses focus and hides its completion list. */
+    public int getElementAtPosition(int x, int y) {
+        int right = minX + width - (getContentOverhang() > 0 ? 6 : 0);
+        if (x < minX || x >= right || y < minY || y >= maxY) return -1;
+        int relativeY = y - minY + (int) amountScrolled - margin;
+        int index = relativeY / slotHeight;
+        return relativeY >= 0 && index < getNumElements() ? index : -1;
+    }
+
     public void setSelection(T selection) {
         setSelection(getIndexOf(selection));
     }

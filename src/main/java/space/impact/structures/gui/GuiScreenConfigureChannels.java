@@ -68,6 +68,7 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
         list = new GuiChannelsList(152, 91, 12, 21, 14);
         list.addSelectionListener((list, selectedIndex) -> {
             Entry<String, Integer> e = list.getElementAt(selectedIndex);
+            if (e == null) return;
             key.setText(e.getKey());
             value.setText(e.getValue().toString());
             updateButtons();
@@ -246,9 +247,24 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
 
     @Override
     protected void mouseClicked(int mX, int mY, int button) {
+        if (button == 0 && key.isFocused()) {
+            int index = autoCompleteList.getElementAtPosition(mX, mY);
+            if (index >= 0) {
+                acceptCompletion(autoCompleteList.getElementAt(index));
+                return;
+            }
+        }
         super.mouseClicked(mX, mY, button);
         key.mouseClicked(mX, mY, button);
         value.mouseClicked(mX, mY, button);
+    }
+
+    private void acceptCompletion(String channel) {
+        key.setText(channel);
+        key.setFocused(false);
+        value.setFocused(true);
+        value.setText("1");
+        value.setSelectionPos(0);
     }
 
     @Override
@@ -272,11 +288,7 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
             case Keyboard.KEY_RETURN:
             case Keyboard.KEY_NUMPADENTER:
                 if (key.isFocused() && autoCompleteList.getSelectedElement() != null) {
-                    key.setText(autoCompleteList.getSelectedElement());
-                    key.setFocused(false);
-                    value.setFocused(true);
-                    value.setText("1");
-                    value.setSelectionPos(0);
+                    acceptCompletion(autoCompleteList.getSelectedElement());
                     return;
                 }
                 GuiButton add = getButtonList().get(ADD_BTN);
@@ -571,7 +583,7 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
 
         @Override
         public String getElementAt(int index) {
-            return index >= 0 && index < cache.size() ? getOptions().get(index).getKey() : null;
+            return index >= 0 && index < getOptions().size() ? getOptions().get(index).getKey() : null;
         }
 
         @Override
@@ -597,7 +609,8 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
 
         @Override
         public Entry<String, Integer> getElementAt(int index) {
-            return ChannelDataAccessor.iterateChannelData(trigger).sorted().skip(index).findFirst().orElse(null);
+            return index < 0 ? null : ChannelDataAccessor.iterateChannelData(trigger)
+                    .sorted(Entry.comparingByKey()).skip(index).findFirst().orElse(null);
         }
 
         @Override
