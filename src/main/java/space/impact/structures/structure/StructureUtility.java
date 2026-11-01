@@ -1612,7 +1612,11 @@ public class StructureUtility {
                 @Override
                 public BlocksToPlace getBlocksToPlace(T t, World world, int x, int y, int z, ItemStack trigger,
                         AutoPlaceEnvironment env) {
-                    // there is getSubItems on ItemBlock, but it's client only
+                    if (block == defaultBlock) {
+                        Item item = Item.getItemFromBlock(block);
+                        return item == null ? BlocksToPlace.createEmpty()
+                                : BlocksToPlace.create(ItemStackPredicate.from(item));
+                    }
                     return BlocksToPlace.create(defaultBlock, defaultMeta);
                 }
 
@@ -1652,7 +1656,11 @@ public class StructureUtility {
                 @Override
                 public BlocksToPlace getBlocksToPlace(T t, World world, int x, int y, int z, ItemStack trigger,
                         AutoPlaceEnvironment env) {
-                    // there is getSubItems on ItemBlock, but it's client only
+                    if (block == defaultBlock) {
+                        Item item = Item.getItemFromBlock(block);
+                        return item == null ? BlocksToPlace.createEmpty()
+                                : BlocksToPlace.create(ItemStackPredicate.from(item));
+                    }
                     return BlocksToPlace.create(defaultBlock, defaultMeta);
                 }
 
