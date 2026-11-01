@@ -17,7 +17,6 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.InventoryEnderChest;
 import net.minecraft.item.ItemStack;
 
-import space.impact.structures.util.ItemStackMap;
 import space.impact.structures.SortedRegistry;
 import space.impact.structures.util.InventoryUtility.ItemStackExtractor.APIType;
 import space.impact.structures.util.ItemStackPredicate.NBTMode;
@@ -62,8 +61,7 @@ public class InventoryUtility {
 
                     @Override
                     public void markDirty(InventoryIterable<InventoryEnderChest> inv) {
-                        // inv.getInventory().markDirty();
-                        // TODO this seems to be a noop
+                        inv.getInventory().markDirty();
                     }
                 });
     }
@@ -135,7 +133,7 @@ public class InventoryUtility {
                         filter,
                         player,
                         false);
-                if (found > 0) inv.markDirty();
+                if (!simulate && found > 0) inv.markDirty();
                 return found;
             }
         };
@@ -153,13 +151,15 @@ public class InventoryUtility {
      */
     public static Map<ItemStack, Integer> takeFromInventory(EntityPlayerMP player, Predicate<ItemStack> predicate,
             boolean simulate, int count) {
-        ItemStackCounterImpl store = new ItemStackCounterImpl();
-        int sum = 0;
-        for (InventoryProvider<?> provider : inventoryProviders.getPlayerOrdering(player)) {
-            sum += takeFromPlayer(player, predicate, simulate, count - sum, store, provider, null);
-            if (sum >= count) return store.getStore();
+        try (ExtractionScope ignored = ExtractionScope.open()) {
+            ItemStackCounterImpl store = new ItemStackCounterImpl();
+            int sum = 0;
+            for (InventoryProvider<?> provider : inventoryProviders.getPlayerOrdering(player)) {
+                sum += takeFromPlayer(player, predicate, simulate, count - sum, store, provider, null);
+                if (sum >= count) return store.getStore();
+            }
+            return store.getStore();
         }
-        return store.getStore();
     }
 
     /**
@@ -172,15 +172,17 @@ public class InventoryUtility {
      * @return amount taken. never negative nor bigger than count...
      */
     public static int takeFromInventory(EntityPlayerMP player, ItemStack filter, boolean simulate) {
-        int sum = 0;
-        int count = filter.stackSize;
-        ItemStackPredicate predicate = ItemStackPredicate.from(filter, NBTMode.EXACT);
-        ItemStackCounterImpl store = new ItemStackCounterImpl();
-        for (InventoryProvider<?> provider : inventoryProviders.getPlayerOrdering(player)) {
-            sum += takeFromPlayer(player, predicate, simulate, count - sum, store, provider, filter);
-            if (sum >= count) return sum;
+        try (ExtractionScope ignored = ExtractionScope.open()) {
+            int sum = 0;
+            int count = filter.stackSize;
+            ItemStackPredicate predicate = ItemStackPredicate.from(filter, NBTMode.EXACT);
+            ItemStackCounterImpl store = new ItemStackCounterImpl();
+            for (InventoryProvider<?> provider : inventoryProviders.getPlayerOrdering(player)) {
+                sum += takeFromPlayer(player, predicate, simulate, count - sum, store, provider, filter);
+                if (sum >= count) return sum;
+            }
+            return sum;
         }
-        return sum;
     }
 
     // workaround java generics issue
@@ -190,7 +192,7 @@ public class InventoryUtility {
         R inv = provider.getInventory(player);
         if (inv == null) return 0;
         int taken = takeFromInventory(inv, predicate, simulate, count, store, filter, player, true);
-        if (taken > 0) provider.markDirty(inv);
+        if (!simulate && taken > 0) provider.markDirty(inv);
         return taken;
     }
 
@@ -207,9 +209,11 @@ public class InventoryUtility {
      */
     public static Map<ItemStack, Integer> takeFromInventory(Iterable<ItemStack> inv, Predicate<ItemStack> predicate,
             boolean simulate, int count, boolean recursive) {
-        ItemStackCounterImpl store = new ItemStackCounterImpl();
-        takeFromInventory(inv, predicate, simulate, count, store, null, null, recursive);
-        return store.getStore();
+        try (ExtractionScope ignored = ExtractionScope.open()) {
+            ItemStackCounterImpl store = new ItemStackCounterImpl();
+            takeFromInventory(inv, predicate, simulate, count, store, null, null, recursive);
+            return store.getStore();
+        }
     }
 
     private static int takeFromInventory(@Nonnull Iterable<ItemStack> inv, @Nonnull Predicate<ItemStack> predicate,

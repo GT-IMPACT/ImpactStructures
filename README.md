@@ -32,4 +32,11 @@ git submodule update --init --recursive
 
 Команды: `/istruct_channel` и `/istruct_registry_debug`.
 
+Опциональные источники материалов для survival-строительства: AE2, WCT,
+AE2FluidCraft, Baubles, Forestry, Backpack и Golden Bag из Extra Utilities. Каждый адаптер включается только при
+наличии своего мода и необходимых API. [Версии, поведение и проверки](docs/integrations.md).
+
+Forestry, Backpack и Extra Utilities для компиляции находятся в `libs/`; остальные зависимости
+загружаются из Maven. В итоговый JAR эти моды не включаются.
+
 Лицензии: [LICENSE](LICENSE), [LICENSE.LESSER](LICENSE.LESSER). [NOTICE](NOTICE).

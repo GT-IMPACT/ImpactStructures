@@ -1,9 +1,9 @@
 package space.impact.structures;
 
-import static space.impact.structures.ImpactStructures.CHANNEL_SHOW_ERROR;
-import static space.impact.structures.ImpactStructures.MOD_ID;
 import static space.impact.structures.BuildConfigKt.MODNAME;
 import static space.impact.structures.BuildConfigKt.VERSION;
+import static space.impact.structures.ImpactStructures.CHANNEL_SHOW_ERROR;
+import static space.impact.structures.ImpactStructures.MOD_ID;
 
 import net.minecraft.block.Block;
 import net.minecraft.creativetab.CreativeTabs;
@@ -15,35 +15,19 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.Constants;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import space.impact.structures.block.BlockHint;
-import space.impact.structures.block.ConstructionPlaceholderBlock;
-import space.impact.structures.command.CommandConfigureChannels;
-import space.impact.structures.command.CommandRegistryDebug;
-import space.impact.structures.item.ItemBlockHint;
-import space.impact.structures.item.ItemConstructableTrigger;
-import space.impact.structures.item.ItemDebugConstructableTrigger;
-import space.impact.structures.item.ItemFrontRotationTool;
-import space.impact.structures.net.AlignmentMessage;
-import space.impact.structures.net.ErrorHintParticleMessage;
-import space.impact.structures.net.RegistryOrderSyncMessage;
-import space.impact.structures.net.SetChannelDataMessage;
-import space.impact.structures.net.UpdateHintParticleMessage;
-import space.impact.structures.net.HintMarkerMessage;
-import space.impact.structures.net.ServerTasks;
-import space.impact.structures.util.InventoryUtility;
-import space.impact.structures.util.XSTR;
-
-import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLInterModComms;
 import cpw.mods.fml.common.event.FMLLoadCompleteEvent;
+import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
@@ -52,7 +36,24 @@ import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import net.minecraftforge.common.MinecraftForge;
+import space.impact.structures.block.BlockHint;
+import space.impact.structures.block.ConstructionPlaceholderBlock;
+import space.impact.structures.command.CommandConfigureChannels;
+import space.impact.structures.command.CommandRegistryDebug;
+import space.impact.structures.compat.OptionalIntegrations;
+import space.impact.structures.item.ItemBlockHint;
+import space.impact.structures.item.ItemConstructableTrigger;
+import space.impact.structures.item.ItemDebugConstructableTrigger;
+import space.impact.structures.item.ItemFrontRotationTool;
+import space.impact.structures.net.AlignmentMessage;
+import space.impact.structures.net.ErrorHintParticleMessage;
+import space.impact.structures.net.HintMarkerMessage;
+import space.impact.structures.net.RegistryOrderSyncMessage;
+import space.impact.structures.net.ServerTasks;
+import space.impact.structures.net.SetChannelDataMessage;
+import space.impact.structures.net.UpdateHintParticleMessage;
+import space.impact.structures.util.InventoryUtility;
+import space.impact.structures.util.XSTR;
 
 /**
  * This class does not contain a stable API. Refrain from using this class.
@@ -154,6 +155,11 @@ public class Main {
     @Mod.EventHandler
     public void init(FMLInitializationEvent e) {
         proxy.init(e);
+    }
+
+    @Mod.EventHandler
+    public void postInit(FMLPostInitializationEvent e) {
+        OptionalIntegrations.initialize();
     }
 
     @Mod.EventHandler
