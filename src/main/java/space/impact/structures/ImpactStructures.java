@@ -389,6 +389,7 @@ public class ImpactStructures {
 
     /**
      * Register a channel description here. The description should describe how a channel will be used inside your mod.
+     * The optional localization key {@code description + ".label"} supplies its short name in the channel GUI.
      *
      * @param channel     channel key
      * @param modid       your modid

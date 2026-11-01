@@ -1,336 +1,120 @@
 package space.impact.structures.gui;
 
-import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+import java.util.TreeSet;
 
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.StatCollector;
 
-import org.apache.commons.lang3.StringUtils;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
-import com.google.common.base.Splitter;
+import cpw.mods.fml.common.Loader;
+import cpw.mods.fml.common.ModContainer;
 import space.impact.structures.ChannelDescription;
 import space.impact.structures.Main;
 import space.impact.structures.alignment.constructable.ChannelDataAccessor;
 import space.impact.structures.gui.GuiScrollableList.IGuiScreen;
 
-import cpw.mods.fml.common.Loader;
-
 public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScreen {
-
     private static final String I18N_PREFIX = "item.impactapi.constructableTrigger.gui.";
-
-    private static final int ADD_BTN = 0;
-    private static final int UNSET_BTN = 1;
-    private static final int WIPE_BTN = 2;
-
-    private static final int KEY_MAX_WIDTH = 50;
-    private static final int INFO_BOX_SIZE = 11;
-    private final ItemStack trigger;
-    private final GuiChannelsList list;
-    private final GuiAutoCompleteList autoCompleteList;
-    private final Map<String, List<String>> tooltipSplitCache = new HashMap<>();
-    private final Map<Integer, Map<String, String>> trimCache = new HashMap<>();
-    private GuiTextField key, value;
-    protected int guiTop, guiLeft;
-    private List<String> info;
-    private boolean wipePending = false;
-    private long wipePendingTime = 0;
+    private static final int ADD_BTN = 0, UNSET_BTN = 1, WIPE_BTN = 2, DONE_BTN = 3, CUSTOM_BTN = 4;
     private static final long WIPE_CONFIRM_TIMEOUT_MS = 3000;
+
+    private final ItemStack trigger;
+    private final ChannelListModel list = new ChannelListModel();
+    private final Map<String, Integer> configured = new HashMap<>();
+    private GuiTextField search, key, value;
+    private String editingChannel;
+    private int listX, listY, listWidth, editorY;
+    private boolean listFocused;
+    private boolean listMouseDown;
+    private long wipePendingUntil;
 
     public GuiScreenConfigureChannels(Container container, ItemStack trigger) {
         super(container);
-
         this.trigger = trigger;
-        list = new GuiChannelsList(152, 91, 12, 21, 14);
-        list.addSelectionListener((list, selectedIndex) -> {
-            Entry<String, Integer> e = list.getElementAt(selectedIndex);
-            if (e == null) return;
-            key.setText(e.getKey());
-            value.setText(e.getValue().toString());
-            updateButtons();
-        });
-        autoCompleteList = new GuiAutoCompleteList(151 + 12 - 45 - 2, 50, 45, 119 + 12, 14);
     }
 
     @Override
     public void initGui() {
         super.initGui();
-        // so you can keep holding backspace to delete a long sequence of chars
         Keyboard.enableRepeatEvents(true);
+        initializeControls();
+    }
 
-        guiLeft = (this.width - this.getXSize()) / 2;
-        guiTop = (this.height - this.getYSize()) / 2;
-
-        key = new GuiTextField(fontRendererObj, guiLeft + 45, guiTop + 119, 151 + 12 - 45, 12) {
-
+    // Separate from LWJGL initialization to test input without opening a game window.
+    void initializeControls() {
+        String previousSearch = search == null ? "" : search.getText();
+        String previousKey = key == null ? "" : key.getText();
+        String previousValue = value == null ? "1" : value.getText();
+        int focused = key != null && key.isFocused() ? 1 : value != null && value.isFocused() ? 2 : 0;
+        xSize = Math.min(420, width - 16);
+        ySize = Math.min(310, height - 16);
+        guiLeft = (width - xSize) / 2;
+        guiTop = (height - ySize) / 2;
+        listX = guiLeft + 12;
+        listY = guiTop + 66;
+        listWidth = xSize - 24;
+        editorY = guiTop + ySize - 82;
+        list.setBounds(listX, listY, listWidth, editorY - listY - 8);
+        listMouseDown = false;
+        search = new GuiTextField(fontRendererObj, listX + 1, guiTop + 32, listWidth - 2, 18);
+        search.setMaxStringLength(128);
+        search.setText(previousSearch);
+        key = new GuiTextField(fontRendererObj, listX + 1, editorY + 12, listWidth - 124, 18) {
             @Override
             public void writeText(String text) {
-                // force lower case
                 super.writeText(text.toLowerCase(Locale.ROOT));
-                updateButtons();
-            }
-
-            @Override
-            public void mouseClicked(int p_146192_1_, int p_146192_2_, int p_146192_3_) {
-                super.mouseClicked(p_146192_1_, p_146192_2_, p_146192_3_);
-                boolean flag = p_146192_1_ >= this.xPosition && p_146192_1_ < this.xPosition + this.width
-                        && p_146192_2_ >= this.yPosition
-                        && p_146192_2_ < this.yPosition + this.height;
-                if (flag && p_146192_3_ == 1) {
-                    key.setText("");
-                    value.setText("");
-                }
-            }
-
-            @Override
-            public void setText(String p_146180_1_) {
-                super.setText(p_146180_1_);
-                updateButtons();
             }
         };
-        value = new GuiTextField(fontRendererObj, guiLeft + 45, guiTop + 139, 151 + 12 - 45, 12) {
-
+        key.setMaxStringLength(128);
+        key.setText(editingChannel == null ? previousKey : ChannelLabels.get(editingChannel));
+        key.setEnabled(editingChannel == null);
+        key.setDisabledTextColour(0xDDDDDD);
+        value = new GuiTextField(fontRendererObj, listX + listWidth - 88, editorY + 12, 87, 18) {
             @Override
             public void writeText(String text) {
-                // ignore write requests containing non digit characters.
-                // we don't accept decimals or negative numbers, so we can safely use isDigit instead of something more
-                // advanced
-                // use codePoints() in case someone pasted an emoji by mistake
-                if (text != null && text.codePoints().allMatch(Character::isDigit)) {
-                    super.writeText(text);
-                    updateButtons();
-                }
-            }
-
-            @Override
-            public void setFocused(boolean p_146195_1_) {
-                if (!p_146195_1_ && isFocused() && !StringUtils.isBlank(getText())) {
-                    int result;
-                    try {
-                        result = Math.max(Integer.parseInt(getText()), 1);
-                    } catch (NumberFormatException e) {
-                        result = 1;
-                    }
-                    setText(String.valueOf(result));
-                }
-                super.setFocused(p_146195_1_);
-            }
-
-            @Override
-            public void mouseClicked(int p_146192_1_, int p_146192_2_, int p_146192_3_) {
-                super.mouseClicked(p_146192_1_, p_146192_2_, p_146192_3_);
-                boolean flag = p_146192_1_ >= this.xPosition && p_146192_1_ < this.xPosition + this.width
-                        && p_146192_2_ >= this.yPosition
-                        && p_146192_2_ < this.yPosition + this.height;
-                if (flag && p_146192_3_ == 1) {
-                    setText("");
-                }
-            }
-
-            @Override
-            public void setText(String p_146180_1_) {
-                super.setText(p_146180_1_);
-                updateButtons();
+                if (text.matches("[0-9]*")) super.writeText(text);
             }
         };
-
-        list.onGuiInit(this);
-        autoCompleteList.onGuiInit(this);
-
-        addButton(new GuiButton(ADD_BTN, guiLeft + 12, guiTop + 157, 47, 20, I18n.format(I18N_PREFIX + "add")));
-        addButton(new GuiButton(UNSET_BTN, guiLeft + 65, guiTop + 157, 47, 20, I18n.format(I18N_PREFIX + "unset")));
-        addButton(new GuiButton(WIPE_BTN, guiLeft + 118, guiTop + 157, 47, 20, I18n.format(I18N_PREFIX + "wipe")));
-
+        value.setMaxStringLength(10);
+        value.setText(previousValue);
+        search.setFocused(focused == 0 && !listFocused);
+        key.setFocused(focused == 1);
+        value.setFocused(focused == 2);
+        buttonList.clear();
+        int buttonWidth = (listWidth - 12) / 4;
+        for (int id = 0; id < 4; id++) {
+            addButton(new GuiButton(id, listX + id * (buttonWidth + 4), editorY + 38, buttonWidth, 20, ""));
+        }
+        addButton(new GuiButton(CUSTOM_BTN, value.xPosition - 24, editorY + 11, 20, 20, "+"));
+        refreshChannels();
         updateButtons();
-        tooltipSplitCache.clear();
-        info = StreamSupport
-                .stream(
-                        Splitter.on("\\n").split(StatCollector.translateToLocal(I18N_PREFIX + "info")).spliterator(),
-                        false)
-                .flatMap(line -> fontRendererObj.listFormattedStringToWidth(line, width * 1 / 3).stream())
-                .collect(Collectors.toList());
     }
 
-    @Override
-    public int getGuiLeft() {
-        return guiLeft;
+    private void refreshChannels() {
+        configured.clear();
+        ChannelDataAccessor.iterateChannelData(trigger).forEach(e -> configured.put(e.getKey(), e.getValue()));
+        Collection<String> channels = new TreeSet<>(ChannelDescription.getAll().keySet());
+        channels.addAll(configured.keySet());
+        list.setChannels(channels, search.getText(), ChannelLabels::get);
     }
 
-    @Override
-    public int getGuiTop() {
-        return guiTop;
-    }
-
-    @Override
-    public int getXSize() {
-        return 176;
-    }
-
-    @Override
-    public int getYSize() {
-        return 188;
-    }
-
-    @Override
-    public void addButton(GuiButton button) {
-        getButtonList().add(button);
-    }
-
-    @Override
-    public void removeButton(GuiButton button) {
-        getButtonList().remove(button);
-    }
-
-    @Override
-    public int getOverlayOffsetX() {
-        return 0;
-    }
-
-    @Override
-    public void doActionPerformed(GuiButton but) {
-        actionPerformed(but);
-    }
-
-    public List<GuiButton> getButtonList() {
-        return buttonList;
-    }
-
-    private boolean isMouseOverValue() {
-        int mx = Mouse.getEventX() * this.width / this.mc.displayWidth;
-        int my = this.height - Mouse.getEventY() * this.height / this.mc.displayHeight - 1;
-        return mx >= value.xPosition && mx < value.xPosition + value.width
-                && my >= value.yPosition
-                && my < value.yPosition + value.height;
-
-    }
-
-    @Override
-    public void handleMouseInput() {
-        int delta = Mouse.getEventDWheel();
-        if (delta != 0) {
-            if (isMouseOverValue()) {
-                if (delta > 0) {
-                    value.setText(String.valueOf(Math.min((long) getValue() + 1, Integer.MAX_VALUE)));
-                } else {
-                    value.setText(String.valueOf(Math.max(getValue() - 1, 1)));
-                }
-            } else {
-                list.handleDWheel(delta);
-            }
-        }
-        super.handleMouseInput();
-    }
-
-    @Override
-    protected void mouseClicked(int mX, int mY, int button) {
-        if (button == 0 && key.isFocused()) {
-            int index = autoCompleteList.getElementAtPosition(mX, mY);
-            if (index >= 0) {
-                acceptCompletion(autoCompleteList.getElementAt(index));
-                return;
-            }
-        }
-        super.mouseClicked(mX, mY, button);
-        key.mouseClicked(mX, mY, button);
-        value.mouseClicked(mX, mY, button);
-    }
-
-    private void acceptCompletion(String channel) {
-        key.setText(channel);
-        key.setFocused(false);
-        value.setFocused(true);
-        value.setText("1");
-        value.setSelectionPos(0);
-    }
-
-    @Override
-    protected void keyTyped(char aChar, int aKey) {
-        GuiScrollableList<?> l = key.isFocused() ? autoCompleteList : list;
-        switch (aKey) {
-            case Keyboard.KEY_TAB:
-                if (key.isFocused()) {
-                    if (autoCompleteList.getSelectedElement() != null) {
-                        key.setText(autoCompleteList.getSelectedElement());
-                        return;
-                    }
-
-                    key.setFocused(false);
-                    value.setFocused(true);
-                } else {
-                    key.setFocused(true);
-                    value.setFocused(false);
-                }
-                return;
-            case Keyboard.KEY_RETURN:
-            case Keyboard.KEY_NUMPADENTER:
-                if (key.isFocused() && autoCompleteList.getSelectedElement() != null) {
-                    acceptCompletion(autoCompleteList.getSelectedElement());
-                    return;
-                }
-                GuiButton add = getButtonList().get(ADD_BTN);
-                if (add.enabled) doActionPerformed(add);
-                return;
-            case Keyboard.KEY_UP:
-                if (l.selectedIndex > 0) l.setSelection(l.selectedIndex - 1);
-                return;
-            case Keyboard.KEY_DOWN:
-                if (l.selectedIndex < l.getNumElements() - 1) l.setSelection(l.selectedIndex + 1);
-                return;
-            case Keyboard.KEY_ESCAPE:
-                if (key.isFocused()) {
-                    if (autoCompleteList.getSelectedElement() != null) {
-                        autoCompleteList.reset();
-                    } else {
-                        key.setFocused(false);
-                    }
-                    return;
-                }
-                break;
-        }
-        if (key.textboxKeyTyped(aChar, aKey) || value.textboxKeyTyped(aChar, aKey)) {
-            updateButtons();
-            return;
-        }
-        super.keyTyped(aChar, aKey);
-    }
-
-    private void updateButtons() {
-        // this will be called from setText of key and value. NEVER UPDATE THE VALUE OF THESE HERE OR GET A
-        // STACKOVERFLOW!
-        String keyText = key.getText();
-        boolean existing = !StringUtils.isEmpty(keyText) && ChannelDataAccessor.hasSubChannel(trigger, keyText);
-        getButtonList().get(ADD_BTN).displayString = existing ? I18n.format(I18N_PREFIX + "set")
-                : I18n.format(I18N_PREFIX + "add");
-        getButtonList().get(ADD_BTN).enabled = !StringUtils.isBlank(key.getText())
-                && !StringUtils.isBlank(value.getText())
-                && getValue() > 0;
-        getButtonList().get(UNSET_BTN).enabled = existing && !StringUtils.isBlank(value.getText());
-
-        autoCompleteList.reset();
+    private String channelName() {
+        return editingChannel == null ? key.getText().trim().toLowerCase(Locale.ROOT) : editingChannel;
     }
 
     private int getValue() {
@@ -341,36 +125,177 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
         }
     }
 
+    private void updateButtons() {
+        boolean existing = configured.containsKey(channelName());
+        getButtonList().get(ADD_BTN).displayString = label(existing ? "set" : "add");
+        getButtonList().get(ADD_BTN).enabled = !channelName().isEmpty() && getValue() > 0;
+        getButtonList().get(UNSET_BTN).displayString = label("unset");
+        getButtonList().get(UNSET_BTN).enabled = existing;
+        getButtonList().get(WIPE_BTN).displayString = label(
+                System.currentTimeMillis() < wipePendingUntil ? "wipe.confirm" : "wipe");
+        getButtonList().get(WIPE_BTN).enabled = !configured.isEmpty();
+        getButtonList().get(DONE_BTN).displayString = I18n.format("gui.done");
+    }
+
+    private void selectChannel(String channel) {
+        if (channel == null) return;
+        editingChannel = channel;
+        key.setText(ChannelLabels.get(channel));
+        key.setEnabled(false);
+        value.setText(Integer.toString(configured.getOrDefault(channel, 1)));
+        updateButtons();
+    }
+
     @Override
-    protected void actionPerformed(GuiButton btn) {
-        if (btn == null) return;
-        switch (btn.id) {
+    public void handleMouseInput() {
+        super.handleMouseInput();
+        int mouseX = Mouse.getEventX() * width / mc.displayWidth;
+        int mouseY = height - Mouse.getEventY() * height / mc.displayHeight - 1;
+        list.wheel(mouseX, mouseY, Mouse.getEventDWheel());
+    }
+
+    @Override
+    protected void mouseClicked(int mouseX, int mouseY, int button) {
+        if (list.contains(mouseX, mouseY)) {
+            search.setFocused(false);
+            key.setFocused(false);
+            value.setFocused(false);
+            listFocused = true;
+            if (button == 0) {
+                listMouseDown = true;
+                selectChannel(list.press(mouseX, mouseY));
+            }
+            return;
+        }
+        listFocused = false;
+        search.mouseClicked(mouseX, mouseY, button);
+        key.mouseClicked(mouseX, mouseY, button);
+        value.mouseClicked(mouseX, mouseY, button);
+        if (search.isFocused() || key.isFocused() || value.isFocused()) return;
+        super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    protected void mouseClickMove(int mouseX, int mouseY, int button, long elapsed) {
+        if (button == 0 && listMouseDown) list.drag(mouseY);
+        else super.mouseClickMove(mouseX, mouseY, button, elapsed);
+    }
+
+    @Override
+    protected void mouseMovedOrUp(int mouseX, int mouseY, int button) {
+        if (button == 0 && listMouseDown) {
+            listMouseDown = false;
+            list.release();
+            return;
+        }
+        super.mouseMovedOrUp(mouseX, mouseY, button);
+    }
+
+    @Override
+    protected void keyTyped(char character, int code) {
+        if (code == Keyboard.KEY_ESCAPE) {
+            super.keyTyped(character, code);
+            return;
+        }
+        if (code == Keyboard.KEY_TAB) {
+            boolean searchFocused = search.isFocused();
+            boolean keyFocused = key.isFocused();
+            search.setFocused(!searchFocused && !keyFocused);
+            key.setFocused(searchFocused);
+            value.setFocused(keyFocused);
+            listFocused = false;
+            return;
+        }
+        if ((search.isFocused() || listFocused) && (code == Keyboard.KEY_UP || code == Keyboard.KEY_DOWN
+                || code == Keyboard.KEY_PRIOR || code == Keyboard.KEY_NEXT)) {
+            int step = code == Keyboard.KEY_PRIOR || code == Keyboard.KEY_NEXT ? list.visibleRows() : 1;
+            selectChannel(list.moveSelection(code == Keyboard.KEY_UP || code == Keyboard.KEY_PRIOR ? -step : step));
+            return;
+        }
+        if (code == Keyboard.KEY_RETURN || code == Keyboard.KEY_NUMPADENTER) {
+            if (search.isFocused() || listFocused) {
+                selectChannel(list.selected() == null ? list.moveSelection(0) : list.selected());
+                if (list.selected() != null) {
+                    search.setFocused(false);
+                    listFocused = false;
+                    value.setFocused(true);
+                    value.setCursorPositionEnd();
+                    value.setSelectionPos(0);
+                }
+            } else if (getButtonList().get(ADD_BTN).enabled) {
+                actionPerformed(getButtonList().get(ADD_BTN));
+            }
+            return;
+        }
+        String previousSearch = search.getText();
+        if (search.textboxKeyTyped(character, code) || key.textboxKeyTyped(character, code)
+                || value.textboxKeyTyped(character, code)) {
+            if (!previousSearch.equals(search.getText())) refreshChannels();
+            updateButtons();
+            return;
+        }
+        if (!search.isFocused() && !key.isFocused() && !value.isFocused()) super.keyTyped(character, code);
+    }
+
+    @Override
+    protected void actionPerformed(GuiButton button) {
+        if (button == null || !button.enabled) return;
+        String channel = channelName();
+        switch (button.id) {
             case ADD_BTN:
-                int value = getValue();
-                if (value <= 0) return;
-                ChannelDataAccessor.setChannelData(trigger, key.getText(), value);
+                if (channel.isEmpty() || getValue() <= 0) return;
+                ChannelDataAccessor.setChannelData(trigger, channel, getValue());
                 break;
             case UNSET_BTN:
-                ChannelDataAccessor.unsetChannelData(trigger, key.getText());
+                if (channel.isEmpty()) return;
+                ChannelDataAccessor.unsetChannelData(trigger, channel);
+                value.setText("1");
                 break;
             case WIPE_BTN:
-                if (!wipePending) {
-                    wipePending = true;
-                    wipePendingTime = System.currentTimeMillis();
-                    btn.displayString = I18n.format(I18N_PREFIX + "wipe.confirm");
-                } else {
-                    wipePending = false;
-                    btn.displayString = I18n.format(I18N_PREFIX + "wipe");
-                    ChannelDataAccessor.wipeChannelData(trigger);
-                    key.setText("");
-                    this.value.setText("");
+                long now = System.currentTimeMillis();
+                if (now >= wipePendingUntil) {
+                    wipePendingUntil = now + WIPE_CONFIRM_TIMEOUT_MS;
+                    updateButtons();
+                    return;
                 }
+                ChannelDataAccessor.wipeChannelData(trigger);
+                editingChannel = null;
+                key.setText("");
+                key.setEnabled(true);
+                value.setText("1");
                 break;
+            case DONE_BTN:
+                mc.thePlayer.closeScreen();
+                return;
+            case CUSTOM_BTN:
+                editingChannel = null;
+                key.setText("");
+                key.setEnabled(true);
+                key.setFocused(true);
+                search.setFocused(false);
+                value.setFocused(false);
+                listFocused = false;
+                list.select(null, false);
+                value.setText("1");
+                updateButtons();
+                return;
+            default:
+                return;
         }
-
+        wipePendingUntil = 0;
+        refreshChannels();
+        list.select(channelName(), false);
+        if (button.id == ADD_BTN) selectChannel(channel);
         updateButtons();
+    }
 
-        super.actionPerformed(btn);
+    @Override
+    public void updateScreen() {
+        super.updateScreen();
+        search.updateCursorCounter();
+        key.updateCursorCounter();
+        value.updateCursorCounter();
+        updateButtons();
     }
 
     @Override
@@ -381,292 +306,128 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
     }
 
     @Override
-    public void updateScreen() {
-        super.updateScreen();
-        key.updateCursorCounter();
-        value.updateCursorCounter();
-        if (wipePending && System.currentTimeMillis() - wipePendingTime > WIPE_CONFIRM_TIMEOUT_MS) {
-            wipePending = false;
-            getButtonList().get(WIPE_BTN).displayString = I18n.format(I18N_PREFIX + "wipe");
+    public void drawGuiContainerBackgroundLayer(float partialTick, int mouseX, int mouseY) {
+        GL11.glDisable(GL11.GL_LIGHTING);
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        drawRect(guiLeft, guiTop, guiLeft + xSize, guiTop + ySize, 0xFF777777);
+        drawRect(guiLeft + 1, guiTop + 1, guiLeft + xSize - 1, guiTop + ySize - 1, 0xFF25282D);
+        fontRendererObj.drawString(label("title"), listX, guiTop + 9, 0xFFFFFF);
+        fontRendererObj.drawString("?", guiLeft + xSize - 18, guiTop + 9, 0xBBBBBB);
+        fontRendererObj.drawString(label("search"), listX, guiTop + 21, 0xBBBBBB);
+        search.drawTextBox();
+        fontRendererObj.drawString(label("channels", list.size(), configured.size()), listX, listY - 12, 0xBBBBBB);
+        drawRect(listX - 1, listY - 1, listX + listWidth + 1, listY + list.height() + 1, 0xFF60646A);
+        drawRect(listX, listY, listX + listWidth, listY + list.height(), 0xFF15171B);
+        int rowRight = listX + listWidth - ChannelListModel.SCROLLBAR_WIDTH;
+        for (int row = 0; row < list.visibleRows() && list.firstRow() + row < list.size(); row++) {
+            String channel = list.channel(list.firstRow() + row);
+            int y = listY + row * ChannelListModel.ROW_HEIGHT;
+            boolean selected = channel.equals(list.selected());
+            boolean hovered = channel.equals(list.channelAt(mouseX, mouseY));
+            if (selected || hovered) drawRect(listX, y, rowRight, y + ChannelListModel.ROW_HEIGHT,
+                    selected ? 0xFF365D80 : 0xFF303740);
+            Integer number = configured.get(channel);
+            String numberText = number == null ? "\u2014" : number.toString();
+            int numberWidth = fontRendererObj.getStringWidth(numberText);
+            fontRendererObj.drawString(trim(ChannelLabels.get(channel), listWidth - numberWidth - 26), listX + 5, y + 5,
+                    number == null ? 0xDDDDDD : 0xA8E6A0);
+            fontRendererObj.drawString(numberText, rowRight - numberWidth - 5, y + 5,
+                    number == null ? 0x777777 : 0xA8E6A0);
         }
-    }
-
-    @Override
-    public void drawGuiContainerBackgroundLayer(float partialTick, int mX, int mY) {
-        mc.renderEngine.bindTexture(new ResourceLocation("impactapi", "textures/gui/channels.png"));
-        int topLeftX = (this.width - this.getXSize()) / 2;
-        int topLeftY = (this.height - this.getYSize()) / 2;
-        drawTexturedModalRect(topLeftX, topLeftY, 0, 0, getXSize(), getYSize());
-        list.drawScreen(mX, mY, partialTick);
-        fontRendererObj.drawString(I18n.format(I18N_PREFIX + "title"), guiLeft + 12, guiTop + 9, 0);
-        fontRendererObj.drawString(I18n.format(I18N_PREFIX + "key"), guiLeft + 12, guiTop + 122, 0);
+        if (list.size() == 0) {
+            fontRendererObj.drawString(trim(label("empty"), listWidth - 10), listX + 5, listY + 6, 0x999999);
+        }
+        if (list.canScroll()) {
+            int barX = list.scrollbarX();
+            int barY = listY + list.thumbTop();
+            drawRect(barX, listY, barX + ChannelListModel.SCROLLBAR_WIDTH, listY + list.height(), 0xFF33373D);
+            drawRect(barX + 1, barY, barX + ChannelListModel.SCROLLBAR_WIDTH - 1,
+                    barY + list.thumbHeight(), list.isDragging() ? 0xFFB7D9F4 : 0xFF8899AA);
+        }
+        fontRendererObj.drawString(label("key"), listX, editorY, 0xDDDDDD);
+        fontRendererObj.drawString(label("value"), value.xPosition, editorY, 0xDDDDDD);
         key.drawTextBox();
-        fontRendererObj.drawString(I18n.format(I18N_PREFIX + "value"), guiLeft + 12, guiTop + 142, 0);
         value.drawTextBox();
+        String hint = getValue() <= 0 ? label("invalid_value") : label("hint");
+        fontRendererObj.drawString(trim(hint, listWidth), listX, editorY + 64, getValue() <= 0 ? 0xFF9999 : 0x999999);
     }
 
     @Override
-    protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
-        if (key.isFocused() && autoCompleteList.getNumElements() > 0) {
-            autoCompleteList.drawScreen(mouseX, mouseY, 0);
+    public void drawScreen(int mouseX, int mouseY, float partialTick) {
+        super.drawScreen(mouseX, mouseY, partialTick);
+        if (mouseX >= guiLeft + xSize - 22 && mouseX < guiLeft + xSize - 10
+                && mouseY >= guiTop + 5 && mouseY < guiTop + 19) {
+            drawHoveringText(fontRendererObj.listFormattedStringToWidth(label("info"), Math.min(280, width - 24)),
+                    mouseX, mouseY, fontRendererObj);
+        }
+        String channel = list.channelAt(mouseX, mouseY);
+        if (channel == null && editingChannel != null && mouseX >= key.xPosition && mouseX < key.xPosition + key.width
+                && mouseY >= key.yPosition && mouseY < key.yPosition + key.height) channel = editingChannel;
+        if (channel != null && !list.isDragging()) {
+            drawHoveringText(channelTooltip(channel), mouseX, mouseY, fontRendererObj);
+        }
+        GuiButton custom = getButtonList().get(CUSTOM_BTN);
+        if (mouseX >= custom.xPosition && mouseX < custom.xPosition + custom.width
+                && mouseY >= custom.yPosition && mouseY < custom.yPosition + custom.height) {
+            drawHoveringText(Collections.singletonList(label("custom")), mouseX, mouseY, fontRendererObj);
         }
     }
 
-    @Override
-    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        super.drawScreen(mouseX, mouseY, partialTicks);
-        String highlight = null;
-        if (key.isFocused() && autoCompleteList.getNumElements() > 0) {
-            highlight = autoCompleteList.getSelectedElement();
-        }
-        if (highlight == null && ChannelDescription.has(key.getText())) {
-            highlight = key.getText();
-        }
-        if (highlight != null) {
-            drawChannelDescriptionTooltip(highlight);
-        }
-        if (mouseX > xSize + guiLeft - INFO_BOX_SIZE - 12 && mouseX < xSize + guiLeft - 12
-                && mouseY > guiTop + 7
-                && mouseY < guiTop + INFO_BOX_SIZE + 7) {
-            drawHoveringText(info, mouseX, mouseY, fontRendererObj);
-        }
-    }
-
-    private void drawChannelDescriptionTooltip(String candidate) {
-        List<String> tooltip = tooltipSplitCache.computeIfAbsent(candidate, this::getChannelDescriptionTooltip);
-        drawHoveringText(tooltip, guiLeft + 151 + 12, guiTop + 122, fontRendererObj);
-    }
-
-    private List<String> getChannelDescriptionTooltip(String candidate) {
+    List<String> channelTooltip(String channel) {
         List<String> tooltip = new ArrayList<>();
-        int maxLine = width - (guiLeft + 151 + 12) - 12;
-        for (Entry<String, String> e : ChannelDescription.get(candidate).getDescriptions().entrySet()) {
-            tooltip.addAll(
-                    fontRendererObj.listFormattedStringToWidth(
-                            StatCollector.translateToLocalFormatted(
-                                    I18N_PREFIX + "channels.from",
-                                    Loader.instance().getIndexedModList().get(e.getKey()).getName()),
-                            maxLine));
-            tooltip.addAll(
-                    fontRendererObj.listFormattedStringToWidth(StatCollector.translateToLocal(e.getValue()), maxLine));
+        tooltip.add(ChannelLabels.get(channel));
+        tooltip.add(label("code", channel));
+        ChannelDescription description = ChannelDescription.getAll().get(channel);
+        if (description != null) {
+            int wrapWidth = Math.min(280, width - 24);
+            for (Entry<String, String> entry : description.getDescriptions().entrySet()) {
+                ModContainer mod = Loader.instance().getIndexedModList().get(entry.getKey());
+                tooltip.add(label("channels.from", mod == null ? entry.getKey() : mod.getName()));
+                for (String line : I18n.format(entry.getValue()).split("\\\\n|\n")) {
+                    tooltip.addAll(fontRendererObj.listFormattedStringToWidth(line, wrapWidth));
+                }
+            }
         }
         return tooltip;
     }
 
-    public String trim(String str, int keyMaxWidth) {
-        Map<String, String> cache = trimCache.get(keyMaxWidth);
-        if (cache == null) {
-            trimCache.put(keyMaxWidth, cache = new HashMap<>());
-        }
-        return cache.computeIfAbsent(str, e -> {
-            String s = fontRendererObj.trimStringToWidth(e, keyMaxWidth);
-            if (s.length() != e.length()) {
-                StringBuilder buffer = new StringBuilder(s).deleteCharAt(s.length() - 1).append("...");
-                while ((s = fontRendererObj.trimStringToWidth(buffer.toString(), keyMaxWidth)).length()
-                        != buffer.length())
-                    // drop last original char
-                    buffer.deleteCharAt(s.length() - 4);
-                do {
-                    buffer.append('.');
-                } while (fontRendererObj.getStringWidth(buffer.toString()) <= keyMaxWidth);
-                s = buffer.deleteCharAt(s.length() - 1).insert(s.length() - 3, EnumChatFormatting.GRAY).toString();
-            }
-            return s;
-        });
+    public String trim(String text, int maxWidth) {
+        if (fontRendererObj.getStringWidth(text) <= maxWidth) return text;
+        return fontRendererObj.trimStringToWidth(text, Math.max(0, maxWidth - fontRendererObj.getStringWidth("..."))) + "...";
     }
 
     /** Accept an indicator without exposing an optional mod's types in the base GUI. */
-    public boolean acceptIndicatorDrop(int mousex, int mousey, ItemStack draggedStack, int button) {
-        if (button != 0 || mousex <= guiLeft
-                || mousey <= guiTop
-                || mousex >= guiLeft + getXSize()
-                || mousey >= guiTop + getYSize()) {
-            return false;
-        }
+    public boolean acceptIndicatorDrop(int mouseX, int mouseY, ItemStack draggedStack, int button) {
+        if (button != 0 || mouseX < guiLeft || mouseY < guiTop
+                || mouseX >= guiLeft + xSize || mouseY >= guiTop + ySize) return false;
         Collection<Entry<String, Integer>> channels = ChannelDescription.iterate(draggedStack);
-        switch (channels.size()) {
-            case 0:
-                return false;
-            case 1:
-            default: // TODO implement a GUI to select which pair to use, instead of blindly using the first
-                Entry<String, Integer> e = channels.iterator().next();
-                ChannelDataAccessor.setChannelData(trigger, e.getKey(), e.getValue());
-                key.setText(e.getKey());
-                value.setText(e.getValue().toString());
-                updateButtons();
-                return true;
-        }
+        if (channels.isEmpty()) return false;
+        Entry<String, Integer> entry = channels.iterator().next();
+        ChannelDataAccessor.setChannelData(trigger, entry.getKey(), entry.getValue());
+        search.setText("");
+        refreshChannels();
+        list.select(entry.getKey(), true);
+        selectChannel(entry.getKey());
+        return true;
     }
 
-    private class GuiAutoCompleteList extends GuiScrollableList<String> {
+    private static String label(String key, Object... args) { return I18n.format(I18N_PREFIX + key, args); }
 
-        private List<Entry<String, String>> cache; // <key, display string>
-
-        public GuiAutoCompleteList(int width, int height, int originX, int originY, int slotHeight) {
-            super(width, height, originX, originY, slotHeight);
-            margin = 2;
-        }
-
-        private List<Entry<String, String>> getOptions() {
-            if (cache == null) {
-                cache = search();
-            }
-            return cache;
-        }
-
-        private List<Entry<String, String>> search() {
-            List<Entry<String, String>> cache = new ArrayList<>();
-            Set<String> added = new HashSet<>();
-            String term = key.getText();
-            String[] subjects = ChannelDescription.getAll().keySet().toArray(new String[0]);
-            Arrays.sort(subjects);
-            if (StringUtils.isBlank(term)) {
-                // nothing. just gives out everything
-                for (String subject : subjects) {
-                    cache.add(new AbstractMap.SimpleImmutableEntry<>(subject, EnumChatFormatting.GRAY + subject));
-                }
-                return cache;
-            }
-            // prefix match
-            for (String s : subjects) {
-                if (s.startsWith(term)) {
-                    cache.add(
-                            new AbstractMap.SimpleImmutableEntry<>(
-                                    s,
-                                    term + EnumChatFormatting.GRAY + s.substring(term.length())));
-                    added.add(s);
-                }
-            }
-            // subsequence match
-            for (String subject : subjects) {
-                if (!added.contains(subject) && subject.length() > term.length()) {
-                    int i = 0, j = 0;
-                    StringBuilder sb = new StringBuilder();
-                    boolean mode = true;
-                    sb.append(EnumChatFormatting.WHITE);
-                    while (i < term.length() && j < subject.length()) {
-                        if (term.codePointAt(i) == subject.codePointAt(j)) {
-                            if (!mode) {
-                                sb.append(EnumChatFormatting.WHITE);
-                                mode = true;
-                            }
-                            sb.appendCodePoint(term.codePointAt(i));
-                            i++;
-                            j++;
-                        } else {
-                            if (mode) {
-                                sb.append(EnumChatFormatting.GRAY);
-                                mode = false;
-                            }
-                            sb.appendCodePoint(subject.codePointAt(j));
-                            j++;
-                        }
-                    }
-                    if (i == term.length()) {
-                        if (j < subject.length()) {
-                            sb.append(EnumChatFormatting.GRAY);
-                            sb.append(subject, j, subject.length());
-                        }
-                        cache.add(new AbstractMap.SimpleImmutableEntry<>(subject, sb.toString()));
-                        added.add(subject);
-                    }
-                }
-            }
-            return cache;
-        }
-
-        public void reset() {
-            cache = search();
-            selectedIndex = cache.isEmpty() ? -1 : 0;
-            resetScroll();
-        }
-
-        @Override
-        public String getElementAt(int index) {
-            return index >= 0 && index < getOptions().size() ? getOptions().get(index).getKey() : null;
-        }
-
-        @Override
-        public int getNumElements() {
-            return getOptions().size();
-        }
-
-        @Override
-        protected void drawElement(int elementIndex, int x, int y, int height, Tessellator tessellator,
-                boolean isHovering) {
-            int color = elementIndex == selectedIndex ? 0xffffff : 0xcccccc;
-            fontRendererObj.drawString(getOptions().get(elementIndex).getValue(), x + margin, y + margin / 2, color);
-        }
-    }
-
-    private class GuiChannelsList extends GuiScrollableList<Entry<String, Integer>> {
-
-        private List<Entry<String, Integer>> cache;
-
-        public GuiChannelsList(int width, int height, int originX, int originY, int slotHeight) {
-            super(width, height, originX, originY, slotHeight);
-        }
-
-        @Override
-        public Entry<String, Integer> getElementAt(int index) {
-            return index < 0 ? null : ChannelDataAccessor.iterateChannelData(trigger)
-                    .sorted(Entry.comparingByKey()).skip(index).findFirst().orElse(null);
-        }
-
-        @Override
-        public int getNumElements() {
-            return ChannelDataAccessor.countChannelData(trigger);
-        }
-
-        @Override
-        protected boolean elementClicked(int elementIndex, boolean doubleClick, int mXRelative, int mYRelative) {
-            if (mXRelative >= margin + 1 && mXRelative <= margin + 5
-                    && mYRelative >= margin / 2 + 1
-                    && mYRelative <= margin / 2 + 5) {
-                Entry<String, Integer> e = getElementAt(elementIndex);
-                if (e != null) {
-                    ChannelDataAccessor.unsetChannelData(trigger, e.getKey());
-                    updateButtons();
-                    return false;
-                }
-            }
-            return super.elementClicked(elementIndex, doubleClick, mXRelative, mYRelative);
-        }
-
-        @Override
-        protected void prepareDrawElements() {
-            cache = ChannelDataAccessor.iterateChannelData(trigger)
-                    .sorted(Entry.comparingByKey()).collect(Collectors.toList());
-        }
-
-        @Override
-        protected void drawElement(int elementIndex, int x, int y, int height, Tessellator tessellator,
-                boolean isHovering) {
-            if (elementIndex < 0 || elementIndex >= cache.size()) {
-                return;
-            }
-            Entry<String, Integer> e = cache.get(elementIndex);
-            if (e == null) return;
-            if (elementIndex > 0) {
-                // args x1, x2, y1, color
-                drawHorizontalLine(minX + 1, maxX - 1, y - 2, 0xffaaaaaa);
-            }
-            int keyMaxWidth = KEY_MAX_WIDTH * 2;
-            if (isHovering) {
-                mc.renderEngine.bindTexture(new ResourceLocation("impactapi", "textures/gui/channels.png"));
-                GL11.glColor4f(1, 1, 1, 1);
-                drawTexturedModalRect(x + margin + 1, y + margin / 2 + 1, 251, 251, 5, 5);
-            }
-            fontRendererObj.drawString(trim(e.getKey(), keyMaxWidth - 9), x + margin + 8, y + margin / 2, 0xffffff);
-            int valueX = x + margin + keyMaxWidth + margin;
-            fontRendererObj.drawString(trim(e.getValue().toString(), maxX - valueX), valueX, y + margin / 2, 0xffffff);
-        }
-
-        @Override
-        public void drawScreen(int mX, int mY, float partialTick) {
-            super.drawScreen(mX, mY, partialTick);
-            // args x1, y1, y2, color
-            drawVerticalLine(minX + margin + margin / 2 + KEY_MAX_WIDTH * 2, minY + 1, maxY - 1, 0xffaaaaaa);
-        }
-    }
+    @Override
+    public int getGuiLeft() { return guiLeft; }
+    @Override
+    public int getGuiTop() { return guiTop; }
+    @Override
+    public int getXSize() { return xSize; }
+    @Override
+    public int getYSize() { return ySize; }
+    @Override
+    public void addButton(GuiButton button) { getButtonList().add(button); }
+    @Override
+    public void removeButton(GuiButton button) { getButtonList().remove(button); }
+    @Override
+    public int getOverlayOffsetX() { return 0; }
+    @Override
+    public void doActionPerformed(GuiButton button) { actionPerformed(button); }
+    public List<GuiButton> getButtonList() { return buttonList; }
 }
