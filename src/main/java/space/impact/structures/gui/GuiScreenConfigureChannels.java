@@ -2,10 +2,8 @@ package space.impact.structures.gui;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeSet;
@@ -29,8 +27,10 @@ import space.impact.structures.alignment.constructable.ChannelDataAccessor;
 import space.impact.structures.gui.GuiScrollableList.IGuiScreen;
 
 public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScreen {
+
     private static final String I18N_PREFIX = "item.impactapi.constructableTrigger.gui.";
-    private static final int ADD_BTN = 0, UNSET_BTN = 1, WIPE_BTN = 2, DONE_BTN = 3, CUSTOM_BTN = 4;
+    private static final int APPLY_BTN = 0, UNSET_BTN = 1, WIPE_BTN = 2, DONE_BTN = 3;
+    private static final int DECREMENT_BTN = 4, INCREMENT_BTN = 5;
     private static final long WIPE_CONFIRM_TIMEOUT_MS = 3000;
 
     private final ItemStack trigger;
@@ -58,9 +58,8 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
     // Separate from LWJGL initialization to test input without opening a game window.
     void initializeControls() {
         String previousSearch = search == null ? "" : search.getText();
-        String previousKey = key == null ? "" : key.getText();
         String previousValue = value == null ? "1" : value.getText();
-        int focused = key != null && key.isFocused() ? 1 : value != null && value.isFocused() ? 2 : 0;
+        boolean valueFocused = value != null && value.isFocused();
         xSize = Math.min(420, width - 16);
         ySize = Math.min(310, height - 16);
         guiLeft = (width - xSize) / 2;
@@ -71,36 +70,73 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
         editorY = guiTop + ySize - 82;
         list.setBounds(listX, listY, listWidth, editorY - listY - 8);
         listMouseDown = false;
-        search = new GuiTextField(fontRendererObj, listX + 1, guiTop + 32, listWidth - 2, 18);
+        search = new GuiTextField(
+                fontRendererObj,
+                listX + 1,
+                guiTop + 32,
+                listWidth - 2,
+                18
+        );
         search.setMaxStringLength(128);
         search.setText(previousSearch);
-        key = new GuiTextField(fontRendererObj, listX + 1, editorY + 12, listWidth - 124, 18) {
-            @Override
-            public void writeText(String text) {
-                super.writeText(text.toLowerCase(Locale.ROOT));
-            }
-        };
+        key = new GuiTextField(
+                fontRendererObj,
+                listX + 1,
+                editorY + 12,
+                listWidth - 148,
+                18
+        );
         key.setMaxStringLength(128);
-        key.setText(editingChannel == null ? previousKey : ChannelLabels.get(editingChannel));
-        key.setEnabled(editingChannel == null);
+        key.setText(editingChannel == null ? "" : ChannelLabels.get(editingChannel));
+        key.setCursorPosition(0);
+        key.setEnabled(false);
         key.setDisabledTextColour(0xDDDDDD);
-        value = new GuiTextField(fontRendererObj, listX + listWidth - 88, editorY + 12, 87, 18) {
+        value = new GuiTextField(
+                fontRendererObj,
+                listX + listWidth - 132,
+                editorY + 12,
+                80,
+                18
+        ) {
             @Override
             public void writeText(String text) {
-                if (text.matches("[0-9]*")) super.writeText(text);
+                if (text.matches("[0-9]*")) {
+                    super.writeText(text);
+                }
             }
         };
         value.setMaxStringLength(10);
         value.setText(previousValue);
-        search.setFocused(focused == 0 && !listFocused);
-        key.setFocused(focused == 1);
-        value.setFocused(focused == 2);
+        search.setFocused(!valueFocused && !listFocused);
+        value.setFocused(valueFocused && editingChannel != null);
         buttonList.clear();
         int buttonWidth = (listWidth - 12) / 4;
         for (int id = 0; id < 4; id++) {
-            addButton(new GuiButton(id, listX + id * (buttonWidth + 4), editorY + 38, buttonWidth, 20, ""));
+            addButton(new GuiButton(
+                    id,
+                    listX + id * (buttonWidth + 4),
+                    editorY + 38,
+                    buttonWidth,
+                    20,
+                    ""
+            ));
         }
-        addButton(new GuiButton(CUSTOM_BTN, value.xPosition - 24, editorY + 11, 20, 20, "+"));
+        addButton(new GuiButton(
+                DECREMENT_BTN,
+                listX + listWidth - 44,
+                editorY + 11,
+                20,
+                20,
+                "-"
+        ));
+        addButton(new GuiButton(
+                INCREMENT_BTN,
+                listX + listWidth - 20,
+                editorY + 11,
+                20,
+                20,
+                "+"
+        ));
         refreshChannels();
         updateButtons();
     }
@@ -114,7 +150,7 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
     }
 
     private String channelName() {
-        return editingChannel == null ? key.getText().trim().toLowerCase(Locale.ROOT) : editingChannel;
+        return editingChannel == null ? "" : editingChannel;
     }
 
     private int getValue() {
@@ -127,20 +163,41 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
 
     private void updateButtons() {
         boolean existing = configured.containsKey(channelName());
-        getButtonList().get(ADD_BTN).displayString = label(existing ? "set" : "add");
-        getButtonList().get(ADD_BTN).enabled = !channelName().isEmpty() && getValue() > 0;
+        int currentValue = getValue();
+        boolean validValue = editingChannel != null && currentValue > 0;
+        value.setEnabled(editingChannel != null);
+        getButtonList().get(APPLY_BTN).displayString = label("apply");
+        getButtonList().get(APPLY_BTN).enabled = validValue;
         getButtonList().get(UNSET_BTN).displayString = label("unset");
         getButtonList().get(UNSET_BTN).enabled = existing;
         getButtonList().get(WIPE_BTN).displayString = label(
                 System.currentTimeMillis() < wipePendingUntil ? "wipe.confirm" : "wipe");
         getButtonList().get(WIPE_BTN).enabled = !configured.isEmpty();
         getButtonList().get(DONE_BTN).displayString = I18n.format("gui.done");
+        getButtonList().get(DECREMENT_BTN).enabled = validValue && currentValue > 1;
+        getButtonList().get(INCREMENT_BTN).enabled = validValue && currentValue < Integer.MAX_VALUE;
+    }
+
+    private void changeValue(int delta) {
+        int currentValue = getValue();
+        if (editingChannel == null || currentValue < 1) {
+            return;
+        }
+        long nextValue = Math.max(1L, Math.min(Integer.MAX_VALUE, (long) currentValue + delta));
+        value.setText(Long.toString(nextValue));
+        value.setFocused(true);
+        search.setFocused(false);
+        listFocused = false;
+        updateButtons();
     }
 
     private void selectChannel(String channel) {
-        if (channel == null) return;
+        if (channel == null) {
+            return;
+        }
         editingChannel = channel;
         key.setText(ChannelLabels.get(channel));
+        key.setCursorPosition(0);
         key.setEnabled(false);
         value.setText(Integer.toString(configured.getOrDefault(channel, 1)));
         updateButtons();
@@ -158,7 +215,6 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
     protected void mouseClicked(int mouseX, int mouseY, int button) {
         if (list.contains(mouseX, mouseY)) {
             search.setFocused(false);
-            key.setFocused(false);
             value.setFocused(false);
             listFocused = true;
             if (button == 0) {
@@ -169,9 +225,13 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
         }
         listFocused = false;
         search.mouseClicked(mouseX, mouseY, button);
-        key.mouseClicked(mouseX, mouseY, button);
         value.mouseClicked(mouseX, mouseY, button);
-        if (search.isFocused() || key.isFocused() || value.isFocused()) return;
+        if (editingChannel == null) {
+            value.setFocused(false);
+        }
+        if (search.isFocused() || value.isFocused()) {
+            return;
+        }
         super.mouseClicked(mouseX, mouseY, button);
     }
 
@@ -198,11 +258,9 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
             return;
         }
         if (code == Keyboard.KEY_TAB) {
-            boolean searchFocused = search.isFocused();
-            boolean keyFocused = key.isFocused();
-            search.setFocused(!searchFocused && !keyFocused);
-            key.setFocused(searchFocused);
-            value.setFocused(keyFocused);
+            boolean focusValue = !value.isFocused() && editingChannel != null;
+            search.setFocused(!focusValue);
+            value.setFocused(focusValue);
             listFocused = false;
             return;
         }
@@ -222,32 +280,41 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
                     value.setCursorPositionEnd();
                     value.setSelectionPos(0);
                 }
-            } else if (getButtonList().get(ADD_BTN).enabled) {
-                actionPerformed(getButtonList().get(ADD_BTN));
+            } else if (getButtonList().get(APPLY_BTN).enabled) {
+                actionPerformed(getButtonList().get(APPLY_BTN));
             }
             return;
         }
         String previousSearch = search.getText();
-        if (search.textboxKeyTyped(character, code) || key.textboxKeyTyped(character, code)
-                || value.textboxKeyTyped(character, code)) {
-            if (!previousSearch.equals(search.getText())) refreshChannels();
+        if (search.textboxKeyTyped(character, code) || value.textboxKeyTyped(character, code)) {
+            if (!previousSearch.equals(search.getText())) {
+                refreshChannels();
+            }
             updateButtons();
             return;
         }
-        if (!search.isFocused() && !key.isFocused() && !value.isFocused()) super.keyTyped(character, code);
+        if (!search.isFocused() && !value.isFocused()) {
+            super.keyTyped(character, code);
+        }
     }
 
     @Override
     protected void actionPerformed(GuiButton button) {
-        if (button == null || !button.enabled) return;
+        if (button == null || !button.enabled) {
+            return;
+        }
         String channel = channelName();
         switch (button.id) {
-            case ADD_BTN:
-                if (channel.isEmpty() || getValue() <= 0) return;
+            case APPLY_BTN:
+                if (channel.isEmpty() || getValue() <= 0) {
+                    return;
+                }
                 ChannelDataAccessor.setChannelData(trigger, channel, getValue());
                 break;
             case UNSET_BTN:
-                if (channel.isEmpty()) return;
+                if (channel.isEmpty()) {
+                    return;
+                }
                 ChannelDataAccessor.unsetChannelData(trigger, channel);
                 value.setText("1");
                 break;
@@ -261,23 +328,16 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
                 ChannelDataAccessor.wipeChannelData(trigger);
                 editingChannel = null;
                 key.setText("");
-                key.setEnabled(true);
                 value.setText("1");
                 break;
             case DONE_BTN:
                 mc.thePlayer.closeScreen();
                 return;
-            case CUSTOM_BTN:
-                editingChannel = null;
-                key.setText("");
-                key.setEnabled(true);
-                key.setFocused(true);
-                search.setFocused(false);
-                value.setFocused(false);
-                listFocused = false;
-                list.select(null, false);
-                value.setText("1");
-                updateButtons();
+            case DECREMENT_BTN:
+                changeValue(-1);
+                return;
+            case INCREMENT_BTN:
+                changeValue(1);
                 return;
             default:
                 return;
@@ -285,7 +345,9 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
         wipePendingUntil = 0;
         refreshChannels();
         list.select(channelName(), false);
-        if (button.id == ADD_BTN) selectChannel(channel);
+        if (button.id == APPLY_BTN) {
+            selectChannel(channel);
+        }
         updateButtons();
     }
 
@@ -365,11 +427,6 @@ public class GuiScreenConfigureChannels extends GuiContainer implements IGuiScre
                 && mouseY >= key.yPosition && mouseY < key.yPosition + key.height) channel = editingChannel;
         if (channel != null && !list.isDragging()) {
             drawHoveringText(channelTooltip(channel), mouseX, mouseY, fontRendererObj);
-        }
-        GuiButton custom = getButtonList().get(CUSTOM_BTN);
-        if (mouseX >= custom.xPosition && mouseX < custom.xPosition + custom.width
-                && mouseY >= custom.yPosition && mouseY < custom.yPosition + custom.height) {
-            drawHoveringText(Collections.singletonList(label("custom")), mouseX, mouseY, fontRendererObj);
         }
     }
 

@@ -9,14 +9,15 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.resources.I18n;
@@ -34,6 +35,7 @@ import space.impact.structures.ChannelDescription;
 import space.impact.structures.alignment.constructable.ChannelDataAccessor;
 
 class ChannelScreenTest {
+
     private Field localeField;
     private Object previousLocale;
     private ItemStack trigger;
@@ -108,24 +110,26 @@ class ChannelScreenTest {
     }
 
     @Test
-    void editingAddsUpdatesRemovesAndRejectsInvalidValues() throws Exception {
-        field("key").setText("custom-channel");
+    void editingSelectedChannelUpdatesRemovesAndRejectsInvalidValues() throws Exception {
+        selectFirstChannel();
         for (String invalid : new String[] {"", "0", "-1", "2147483648", "garbage"}) {
             field("value").setText(invalid);
             invoke("updateButtons");
             assertFalse(gui.getButtonList().get(0).enabled);
+            assertFalse(gui.getButtonList().get(4).enabled);
+            assertFalse(gui.getButtonList().get(5).enabled);
             gui.doActionPerformed(gui.getButtonList().get(0));
-            assertFalse(ChannelDataAccessor.hasSubChannel(trigger, "custom-channel"));
+            assertFalse(ChannelDataAccessor.hasSubChannel(trigger, "screen-channel-00"));
         }
         field("value").setText("2147483647");
         invoke("updateButtons");
         gui.doActionPerformed(gui.getButtonList().get(0));
-        assertEquals(Integer.MAX_VALUE, ChannelDataAccessor.getChannelData(trigger, "custom-channel"));
+        assertEquals(Integer.MAX_VALUE, ChannelDataAccessor.getChannelData(trigger, "screen-channel-00"));
         field("value").setText("5");
         gui.doActionPerformed(gui.getButtonList().get(0));
-        assertEquals(5, ChannelDataAccessor.getChannelData(trigger, "custom-channel"));
+        assertEquals(5, ChannelDataAccessor.getChannelData(trigger, "screen-channel-00"));
         gui.doActionPerformed(gui.getButtonList().get(1));
-        assertFalse(ChannelDataAccessor.hasSubChannel(trigger, "custom-channel"));
+        assertFalse(ChannelDataAccessor.hasSubChannel(trigger, "screen-channel-00"));
     }
 
     @Test
@@ -170,18 +174,24 @@ class ChannelScreenTest {
         assertTrue(ChannelDataAccessor.hasSubChannel(trigger, "existing-custom"));
         gui.doActionPerformed(gui.getButtonList().get(2));
         assertFalse(ChannelDataAccessor.hasSubChannel(trigger));
-        field("key").setText("unsaved-channel");
+        selectFirstChannel();
         field("value").setText("17");
         gui.width = 320;
         gui.height = 240;
         gui.initializeControls();
-        assertEquals("unsaved-channel", field("key").getText());
+        assertEquals("Screen channel 00", field("key").getText());
         assertEquals("17", field("value").getText());
         assertTrue(list().visibleRows() >= 3);
         assertTrue(gui.getGuiLeft() >= 0 && gui.getGuiTop() >= 0);
         assertTrue(gui.getGuiLeft() + gui.getXSize() <= 320);
         assertTrue(gui.getGuiTop() + gui.getYSize() <= 240);
-        assertEquals(5, gui.getButtonList().size());
+        assertEquals(6, gui.getButtonList().size());
+        GuiButton minus = gui.getButtonList().get(4);
+        GuiButton plus = gui.getButtonList().get(5);
+        assertTrue(field("key").xPosition + field("key").width < field("value").xPosition);
+        assertTrue(field("value").xPosition + field("value").width < minus.xPosition);
+        assertTrue(minus.xPosition + minus.width < plus.xPosition);
+        assertTrue(plus.xPosition + plus.width < gui.getGuiLeft() + gui.getXSize());
     }
 
     @Test
@@ -208,7 +218,7 @@ class ChannelScreenTest {
     }
 
     @Test
-    void duplicateLabelsKeepSeparateCodesAndCustomEntryDoesNotRenameSelection() throws Exception {
+    void duplicateLabelsKeepSeparateCodesWhenSteppingValue() throws Exception {
         registerLabel("duplicate-one", "Общее название");
         registerLabel("duplicate-two", "Общее название");
         field("search").setText("общее название");
@@ -221,13 +231,63 @@ class ChannelScreenTest {
         assertEquals(7, ChannelDataAccessor.getChannelData(trigger, "duplicate-two"));
         assertFalse(ChannelDataAccessor.hasSubChannel(trigger, "duplicate-one"));
         gui.doActionPerformed(gui.getButtonList().get(4));
-        assertEquals("", field("key").getText());
-        field("key").writeText("MY_CUSTOM_CODE");
-        invoke("updateButtons");
+        assertEquals("Общее название", field("key").getText());
+        assertEquals("6", field("value").getText());
         gui.doActionPerformed(gui.getButtonList().get(0));
-        assertTrue(ChannelDataAccessor.hasSubChannel(trigger, "my_custom_code"));
-        assertEquals(7, ChannelDataAccessor.getChannelData(trigger, "duplicate-two"));
-        assertEquals("My custom code", field("key").getText());
+        assertEquals(6, ChannelDataAccessor.getChannelData(trigger, "duplicate-two"));
+        assertFalse(ChannelDataAccessor.hasSubChannel(trigger, "duplicate-one"));
+    }
+
+    @Test
+    void valueButtonsRespectBoundsAndApplyToTheSelectedChannel() throws Exception {
+        selectFirstChannel();
+        GuiButton minus = gui.getButtonList().get(4);
+        GuiButton plus = gui.getButtonList().get(5);
+        assertEquals("-", minus.displayString);
+        assertEquals("+", plus.displayString);
+        assertFalse(minus.enabled);
+        assertTrue(plus.enabled);
+        gui.doActionPerformed(minus);
+        assertEquals("1", field("value").getText());
+        gui.doActionPerformed(plus);
+        gui.doActionPerformed(plus);
+        gui.doActionPerformed(minus);
+        assertEquals("2", field("value").getText());
+        assertEquals("Screen channel 00", field("key").getText());
+        assertFalse(ChannelDataAccessor.hasSubChannel(trigger));
+        gui.doActionPerformed(gui.getButtonList().get(0));
+        assertEquals(2, ChannelDataAccessor.getChannelData(trigger, "screen-channel-00"));
+
+        field("value").setText(Integer.toString(Integer.MAX_VALUE - 1));
+        invoke("updateButtons");
+        gui.doActionPerformed(plus);
+        assertEquals(Integer.toString(Integer.MAX_VALUE), field("value").getText());
+        assertFalse(plus.enabled);
+        gui.doActionPerformed(plus);
+        assertEquals(Integer.toString(Integer.MAX_VALUE), field("value").getText());
+        gui.doActionPerformed(minus);
+        assertEquals(Integer.toString(Integer.MAX_VALUE - 1), field("value").getText());
+        assertTrue(plus.enabled);
+    }
+
+    @Test
+    void registeredChannelsAreVisibleWithoutManualAddingAndUnknownSearchCannotCreateOne() throws Exception {
+        assertEquals(40, list().size());
+        assertFalse(ChannelDataAccessor.hasSubChannel(trigger));
+        assertFalse(gui.getButtonList().get(0).enabled);
+        assertFalse(gui.getButtonList().get(4).enabled);
+        assertFalse(gui.getButtonList().get(5).enabled);
+        field("search").setText("unregistered-query");
+        invoke("refreshChannels");
+        gui.keyTyped('\r', Keyboard.KEY_RETURN);
+        gui.doActionPerformed(gui.getButtonList().get(0));
+        assertFalse(ChannelDescription.has("unregistered-query"));
+        assertFalse(ChannelDataAccessor.hasSubChannel(trigger));
+        assertEquals("", field("key").getText());
+    }
+
+    private void selectFirstChannel() {
+        gui.mouseClicked(gui.getGuiLeft() + 17, gui.getGuiTop() + 71, 0);
     }
 
     @SuppressWarnings("unchecked")
