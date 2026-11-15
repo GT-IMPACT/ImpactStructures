@@ -43,6 +43,11 @@ dependencies {
     angelicaRuntime("com.github.GTNewHorizons:GTNHLib:0.11.52:dev")
 }
 tasks.named<JavaExec>("runClient") {
+    // Large examples otherwise log every checked block every second in the development environment.
+    systemProperty(
+        "impactapi.debug",
+        providers.gradleProperty("structureDebug").orElse("false").get(),
+    )
     if (providers.gradleProperty("angelica").map(String::toBoolean).orElse(true).get()) {
         classpath += angelicaRuntime
     }

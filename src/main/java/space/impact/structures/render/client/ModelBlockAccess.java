@@ -17,6 +17,7 @@ import space.impact.structures.render.BlockPosition;
 final class ModelBlockAccess implements IBlockAccess {
 
     private final Map<Long, BlockAppearance> blocks = new HashMap<>();
+    private final Map<LightSample, Integer> lighting = new HashMap<>();
     private final World world;
     private final BlockPosition origin;
 
@@ -49,10 +50,27 @@ final class ModelBlockAccess implements IBlockAccess {
     @Override
     public int getLightBrightnessForSkyBlocks(int x, int y, int z, int minimum) {
         int worldY = Math.max(0, Math.min(world.getHeight() - 1, origin.y + y));
-        if (!world.blockExists(origin.x + x, worldY, origin.z + z)) {
+        LightSample sample = new LightSample(origin.x + x, worldY, origin.z + z, minimum);
+        int brightness = sampleLight(sample);
+        lighting.put(sample, brightness);
+        return brightness;
+    }
+
+    /** Includes the neighbouring samples requested by RenderBlocks for faces and ambient occlusion. */
+    boolean hasLightingChanged() {
+        for (Map.Entry<LightSample, Integer> entry : lighting.entrySet()) {
+            if (sampleLight(entry.getKey()) != entry.getValue()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int sampleLight(LightSample sample) {
+        if (!world.blockExists(sample.x, sample.y, sample.z)) {
             return 0x00F000F0;
         }
-        return world.getLightBrightnessForSkyBlocks(origin.x + x, worldY, origin.z + z, minimum);
+        return world.getLightBrightnessForSkyBlocks(sample.x, sample.y, sample.z, sample.minimum);
     }
 
     @Override
@@ -86,5 +104,34 @@ final class ModelBlockAccess implements IBlockAccess {
     @Override
     public boolean isSideSolid(int x, int y, int z, ForgeDirection side, boolean defaultValue) {
         return getBlock(x, y, z).isSideSolid(this, x, y, z, side);
+    }
+
+    private static final class LightSample {
+
+        private final int x;
+        private final int y;
+        private final int z;
+        private final int minimum;
+
+        private LightSample(int x, int y, int z, int minimum) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.minimum = minimum;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (!(other instanceof LightSample)) {
+                return false;
+            }
+            LightSample sample = (LightSample) other;
+            return x == sample.x && y == sample.y && z == sample.z && minimum == sample.minimum;
+        }
+
+        @Override
+        public int hashCode() {
+            return ((x * 31 + y) * 31 + z) * 31 + minimum;
+        }
     }
 }

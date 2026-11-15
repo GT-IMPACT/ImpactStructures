@@ -38,7 +38,8 @@ git submodule update --init --recursive
 
 [Анимируемый 3D-рендер структур](docs/structure-rendering.md): отдельные API геометрии,
 анимации и управления временем, привязка к каналам либо самостоятельные модели.
-Example-мод с космическим лифтом: `./gradlew :ImpactStructures-Example:runClient`.
+Example-мод с космическим лифтом и трёхслойной каркасной сферой Дайсона:
+`./gradlew :ImpactStructures-Example:runClient`. Команды: `/istruct_example`, `/istruct_dyson`.
 
 Опциональные источники материалов для survival-строительства: AE2, WCT,
 AE2FluidCraft, Baubles, Forestry, Backpack и Golden Bag из Extra Utilities. Каждый адаптер включается только при

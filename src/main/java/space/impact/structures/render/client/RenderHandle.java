@@ -1,10 +1,13 @@
 package space.impact.structures.render.client;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.block.Block;
 import net.minecraft.world.World;
 import space.impact.structures.animation.AnimationClock;
 import space.impact.structures.render.BlockAppearance;
@@ -18,10 +21,13 @@ public final class RenderHandle implements AutoCloseable {
     final BlockPosition origin;
     final List<RenderPart> parts;
     final int[] displayLists;
+    final ModelBlockAccess[] blockAccess;
+    final List<BlockAppearance> appearances = new ArrayList<>();
     private final AnimationClock playback;
     private boolean closed;
     boolean ready;
-    long meshTick = Long.MIN_VALUE;
+    boolean geometryDirty = true;
+    long lightCheckTick = Long.MIN_VALUE;
 
     RenderHandle(World world, BlockPosition origin, double startTick, RenderPart[] parts) {
         if (!Double.isFinite(startTick) || parts.length == 0) {
@@ -32,10 +38,18 @@ public final class RenderHandle implements AutoCloseable {
         this.playback = new AnimationClock(startTick);
         this.parts = Collections.unmodifiableList(Arrays.asList(parts.clone()));
         this.displayLists = new int[parts.length];
+        this.blockAccess = new ModelBlockAccess[parts.length];
+        Map<Block, Integer> metadataByBlock = new IdentityHashMap<>();
         for (RenderPart part : parts) {
             for (BlockAppearance appearance : part.model.getBlocks().values()) {
                 if (appearance.block.hasTileEntity(appearance.metadata) || appearance.block.getRenderType() < 0) {
                     throw new IllegalArgumentException("TileEntity/special-only models need an explicit block replacement");
+                }
+                int seen = metadataByBlock.getOrDefault(appearance.block, 0);
+                int bit = 1 << appearance.metadata;
+                if ((seen & bit) == 0) {
+                    appearances.add(appearance);
+                    metadataByBlock.put(appearance.block, seen | bit);
                 }
             }
         }
@@ -63,7 +77,7 @@ public final class RenderHandle implements AutoCloseable {
 
     /** Rebuild after external texture/appearance changes. Resource reload is handled automatically. */
     public void invalidateGeometry() {
-        meshTick = Long.MIN_VALUE;
+        geometryDirty = true;
     }
 
     boolean sourcesValid() {

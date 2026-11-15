@@ -8,6 +8,9 @@ import net.minecraft.init.Blocks;
 import space.impact.structures.alignment.enumerable.ExtendedFacing;
 import space.impact.structures.animation.Animations;
 import space.impact.structures.animation.Vector3;
+import space.impact.structures.example.DysonBlueprint;
+import space.impact.structures.example.DysonController;
+import space.impact.structures.example.DysonGeometry;
 import space.impact.structures.example.ElevatorBlueprint;
 import space.impact.structures.example.ElevatorController;
 import space.impact.structures.example.ElevatorMotion;
@@ -22,6 +25,7 @@ import space.impact.structures.render.client.StructureRenderer;
 public final class ExampleClientProxy extends ExampleProxy {
 
     private final Map<ElevatorController, RenderHandle> handles = new WeakHashMap<>();
+    private final Map<DysonController, RenderHandle> dysonHandles = new WeakHashMap<>();
     private BlockModel collar;
 
     @Override
@@ -70,6 +74,51 @@ public final class ExampleClientProxy extends ExampleProxy {
             collar = builder.build();
         }
         return collar;
+    }
+
+    @Override
+    public void update(DysonController controller) {
+        RenderHandle handle = dysonHandles.get(controller);
+        if (!controller.isRunning()) {
+            remove(controller);
+            return;
+        }
+        if (handle != null && !handle.isClosed()) {
+            handle.setStartTick(controller.getStartTick());
+            return;
+        }
+        if (controller.getWorldObj().getTotalWorldTime() % 20 != 0 || !DysonBlueprint.check(controller)) {
+            return;
+        }
+        BlockPosition origin = controller.getStructureOrigin();
+        RenderPart[] parts = new RenderPart[DysonGeometry.LAYERS];
+        for (int layer = 0; layer < parts.length; layer++) {
+            StructureRenderBinding binding = StructureRenderBinding.capture(
+                    DysonBlueprint.STRUCTURE,
+                    "main",
+                    DysonBlueprint.channel(layer),
+                    controller.getWorldObj(),
+                    origin,
+                    ExtendedFacing.DEFAULT,
+                    DysonBlueprint.OFFSET,
+                    UnaryOperator.identity()
+            );
+            parts[layer] = new RenderPart(binding, DysonGeometry.animation(layer), true);
+        }
+        dysonHandles.put(controller, StructureRenderer.INSTANCE.show(
+                controller.getWorldObj(),
+                origin,
+                controller.getStartTick(),
+                parts
+        ));
+    }
+
+    @Override
+    public void remove(DysonController controller) {
+        RenderHandle handle = dysonHandles.remove(controller);
+        if (handle != null) {
+            handle.close();
+        }
     }
 
     @Override

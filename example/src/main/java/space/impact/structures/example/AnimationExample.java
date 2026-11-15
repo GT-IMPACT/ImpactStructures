@@ -12,6 +12,7 @@ public final class AnimationExample {
 
     public static final String MOD_ID = "impactstructures_example";
     public static ElevatorControllerBlock controller;
+    public static DysonControllerBlock dysonController;
 
     @SidedProxy(clientSide = "space.impact.structures.example.client.ExampleClientProxy",
             serverSide = "space.impact.structures.example.ExampleProxy")
@@ -22,10 +23,14 @@ public final class AnimationExample {
         controller = new ElevatorControllerBlock();
         GameRegistry.registerBlock(controller, "elevator_controller");
         GameRegistry.registerTileEntity(ElevatorController.class, MOD_ID + ":elevator");
+        dysonController = new DysonControllerBlock();
+        GameRegistry.registerBlock(dysonController, "dyson_controller");
+        GameRegistry.registerTileEntity(DysonController.class, MOD_ID + ":dyson");
     }
 
     @Mod.EventHandler
     public void serverStarting(FMLServerStartingEvent event) {
         event.registerServerCommand(new ElevatorCommand());
+        event.registerServerCommand(new DysonCommand());
     }
 }

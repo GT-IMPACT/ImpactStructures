@@ -8,4 +8,10 @@ public class ExampleProxy {
 
     public void remove(ElevatorController controller) {
     }
+
+    public void update(DysonController controller) {
+    }
+
+    public void remove(DysonController controller) {
+    }
 }

@@ -160,10 +160,11 @@ public final class StructureRenderer {
 
     private void draw(RenderHandle scene, float partialTicks) {
         long tick = scene.world.getTotalWorldTime();
-        // Lighting is sampled at the source once per second, not re-tessellated for every animated frame.
-        if (scene.meshTick == Long.MIN_VALUE || tick - scene.meshTick >= 20 || tick < scene.meshTick) {
+        // Poll the sampled light, but retain display lists while their inputs are unchanged.
+        if (scene.geometryDirty || tick - scene.lightCheckTick >= 20 || tick < scene.lightCheckTick) {
             compile(scene);
-            scene.meshTick = tick;
+            scene.geometryDirty = false;
+            scene.lightCheckTick = tick;
             if (!scene.ready) {
                 scene.ready = true;
                 refreshHiddenBlocks();
@@ -172,6 +173,14 @@ public final class StructureRenderer {
         GL11.glPushMatrix();
         try {
             GL11.glTranslated(scene.origin.x, scene.origin.y, scene.origin.z);
+            double seconds = scene.seconds(partialTicks);
+            if (angelica) {
+                for (BlockAppearance block : scene.appearances) {
+                    for (int side = 0; side < 6; side++) {
+                        AngelicaCompat.markTextureUsed(block.block.getIcon(side, block.metadata));
+                    }
+                }
+            }
             for (int pass = 0; pass < 2; pass++) {
                 if (pass == 0) {
                     GL11.glDisable(GL11.GL_BLEND);
@@ -186,19 +195,12 @@ public final class StructureRenderer {
                     GL11.glPushMatrix();
                     try {
                         transform.identity();
-                        part.animation.apply(scene.seconds(partialTicks), transform);
+                        part.animation.apply(seconds, transform);
                         transform.writeTo(matrix);
                         GL11.glMultMatrix(matrix);
                         GL11.glCallList(scene.displayLists[index] + pass);
                     } finally {
                         GL11.glPopMatrix();
-                    }
-                    if (angelica && pass == 0) {
-                        for (BlockAppearance block : part.model.getBlocks().values()) {
-                            for (int side = 0; side < 6; side++) {
-                                AngelicaCompat.markTextureUsed(block.block.getIcon(side, block.metadata));
-                            }
-                        }
                     }
                 }
             }
@@ -210,10 +212,15 @@ public final class StructureRenderer {
     private void compile(RenderHandle scene) {
         for (int index = 0; index < scene.parts.size(); index++) {
             RenderPart part = scene.parts.get(index);
+            ModelBlockAccess previous = scene.blockAccess[index];
+            if (!scene.geometryDirty && previous != null && !previous.hasLightingChanged()) {
+                continue;
+            }
             if (scene.displayLists[index] == 0) {
                 scene.displayLists[index] = GLAllocation.generateDisplayLists(2);
             }
-            RenderBlocks renderer = new RenderBlocks(new ModelBlockAccess(part.model, scene.world, scene.origin));
+            ModelBlockAccess access = new ModelBlockAccess(part.model, scene.world, scene.origin);
+            RenderBlocks renderer = new RenderBlocks(access);
             for (int pass = 0; pass < 2; pass++) {
                 GL11.glNewList(scene.displayLists[index] + pass, GL11.GL_COMPILE);
                 Tessellator tessellator = Tessellator.instance;
@@ -232,6 +239,7 @@ public final class StructureRenderer {
                     GL11.glEndList();
                 }
             }
+            scene.blockAccess[index] = access;
         }
     }
 
