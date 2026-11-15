@@ -46,6 +46,7 @@ buildConfig {
 }
 
 dependencies {
+    api("space.impact:Forgelin:2.1.3")
     compileOnly("com.github.GTNewHorizons:Angelica:$angelicaVersion:dev") {
         isTransitive = false
     }
@@ -81,6 +82,11 @@ tasks.test {
     javaLauncher.set(javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(8))
     })
+    doFirst {
+        check(classpath.files.none { it.name.startsWith("kotlin-reflect-") }) {
+            "KotlinX must run without kotlin-reflect"
+        }
+    }
 }
 
 // Keep ordinary tests on the no-integration runtime; exercise real mod APIs separately.
@@ -107,13 +113,11 @@ val testCompat by tasks.registering(Test::class) {
 
 tasks.named("check") {
     dependsOn(":ImpactStructures-Example:check")
-    dependsOn(":ImpactStructures-Ktx:check")
     dependsOn(testCompat)
 }
 
 tasks.named("build") {
     dependsOn(":ImpactStructures-Example:build")
-    dependsOn(":ImpactStructures-Ktx:build")
 }
 
 // Publication coordinates must match project names for local reobfuscation.
@@ -137,10 +141,9 @@ val prepareKotlinXConsumerBuildLogic by tasks.registering(Copy::class) {
 
 tasks.register<Exec>("verifyKotlinXConsumer") {
     group = "verification"
-    description = "Tests the independently published KotlinX dev and reobf variants."
+    description = "Tests Java, KotlinX and animation APIs from the single published dev and reobf artifact."
     dependsOn(
         ":publishMavenPublicationToConsumerTestRepository",
-        ":ImpactStructures-Ktx:publishMavenPublicationToConsumerTestRepository",
         prepareKotlinXConsumerBuildLogic,
     )
     doFirst {
@@ -148,7 +151,7 @@ tasks.register<Exec>("verifyKotlinXConsumer") {
         commandLine(
             file("${System.getProperty("java.home")}/bin/$javaBinary"),
             "-jar", file("gradle/wrapper/gradle-wrapper.jar"),
-            "-p", file("kotlinx/consumer-test"),
+            "-p", file("consumer-test"),
             "build", "--no-daemon", "--console=plain",
             "-PimpactVersion=${project.version}",
             "-PconsumerRepository=${layout.buildDirectory.dir("consumer-repository").get().asFile.absolutePath}",

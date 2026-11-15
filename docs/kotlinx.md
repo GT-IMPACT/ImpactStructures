@@ -1,13 +1,13 @@
 # KotlinX: структуры на Kotlin
 
-`ImpactStructures-Ktx` — отдельный Kotlin-фасад над Java API Impact Structures. Он создаёт обычные
+KotlinX — Kotlin-фасад внутри общего модуля `ImpactStructures`. Он создаёт обычные
 `IStructureDefinition`/`IStructureElement` и использует тот же обход, survival-строительство, каналы и голограммы.
 Существующий Java API остаётся доступен напрямую.
 
 Namespace KotlinX — `space.impact.structures.kotlinx`; Java-ядра — `space.impact.structures`.
 
 Полный пример контроллера, компилируемый вместе с тестами:
-[ExampleController.kt](../kotlinx/src/test/kotlin/space/impact/structures/kotlinx/examples/ExampleController.kt).
+[ExampleController.kt](../src/test/kotlin/space/impact/structures/kotlinx/examples/ExampleController.kt).
 Он реализует `IConstructableProvider` и `ISurvivalConstructable`, содержит nullable tier-состояние,
 канал выбора уровня, callback подсчёта корпусов и собственный элемент стеклянного окна.
 `getStructureDefinition()` возвращает кэшированное определение, чтобы проектор обнаруживал объявленные каналы.
@@ -15,7 +15,7 @@ Namespace KotlinX — `space.impact.structures.kotlinx`; Java-ядра — `spac
 
 ## Подключение
 
-Используйте одинаковую версию ядра и KotlinX:
+Подключайте единый артефакт с Java API и KotlinX:
 
 ```kotlin
 val impactVersion: String = providers.gradleProperty("impactVersion").get()
@@ -25,17 +25,18 @@ repositories {
 }
 
 dependencies {
-    implementation("space.impact:ImpactStructures-Ktx:$impactVersion")
+    implementation("space.impact:ImpactStructures:$impactVersion")
 }
 ```
 
-Ядро `space.impact:ImpactStructures` приходит через API-зависимость KotlinX. При использовании Gradle Module Metadata
+Отдельный артефакт `ImpactStructures-Ktx` больше не нужен. При использовании Gradle Module Metadata
 варианты выбираются средствами Gradle/RFG. Для старого потребителя, читающего только POM, dev-артефакт доступен
-с classifier `dev`: `space.impact:ImpactStructures-Ktx:<version>:dev`.
+с classifier `dev`: `space.impact:ImpactStructures:<version>:dev`.
 
-Runtime предоставляет **Forgelin 2.1.3** через зависимость KotlinX. Java-ядро от него не зависит. Отдельные `kotlin-stdlib`, `kotlin-reflect`
-или coroutines для KotlinX добавлять не требуется. Это библиотека без отдельного mod-bootstrap;
-её использование не заменяет установку Impact Structures и Forgelin в игровой сборке.
+Runtime предоставляет **Forgelin 2.1.3** через API-зависимость общего модуля. Отдельные `kotlin-stdlib`,
+`kotlin-reflect` или coroutines для KotlinX добавлять не требуется. В игровую сборку устанавливаются
+Impact Structures и Forgelin. Старый JAR `ImpactStructures-Ktx` нужно убрать, чтобы не дублировать классы.
+Пакеты `space.impact.structures.kotlinx` и существующие сигнатуры сохранены: менять импорты не требуется.
 
 ## Форма и элементы
 
@@ -302,10 +303,117 @@ registerContainer<ExampleController>(
 )
 ```
 
-Компилируемый вариант — [ExampleContainer.kt](../kotlinx/src/test/kotlin/space/impact/structures/kotlinx/examples/ExampleContainer.kt).
+Компилируемый вариант — [ExampleContainer.kt](../src/test/kotlin/space/impact/structures/kotlinx/examples/ExampleContainer.kt).
 Для собственного `ExampleController` такая регистрация избыточна: он уже реализует provider.
 Тип контейнера не ограничен TileEntity; мета-контекст GregTech также можно адаптировать на стороне GregTech.
 Lookup `containerOrNull<Context>()` возвращает nullable-контейнер, `toConstructable(context, facing)` доступен напрямую.
+
+## Анимации и 3D-рендер
+
+Пакет `space.impact.structures.kotlinx.animation` не зависит от Minecraft или OpenGL.
+DSL собирает обычный `IAnimation`; расчёт движения выполняет существующий Java API.
+
+```kotlin
+import space.impact.structures.animation.Vector3
+import space.impact.structures.kotlinx.animation.animation
+import space.impact.structures.kotlinx.animation.move
+import space.impact.structures.kotlinx.animation.pingPong
+import space.impact.structures.kotlinx.render.animated
+import space.impact.structures.kotlinx.render.blockModel
+import space.impact.structures.kotlinx.render.client.showStructureRender
+
+val rotation = animation {
+    spin(
+        degreesPerSecond = 30.0,
+        pivot = Vector3(
+            0.5,
+            0.5,
+            0.5,
+        ),
+    )
+}
+val carriageMotion = move(
+    to = Vector3(
+        0.0,
+        44.0,
+        0.0,
+    ),
+    durationSeconds = 12.0,
+).pingPong(durationSeconds = 12.0)
+
+val model = blockModel {
+    block(
+        x = 0,
+        y = 0,
+        z = 0,
+        block = Blocks.iron_block,
+    )
+}
+val handle = clientWorld.showStructureRender(
+    origin = origin,
+    startTick = serverStartTick.toDouble(),
+    parts = arrayOf(model.animated(animation = rotation)),
+)
+```
+
+`spin` и `move` доступны и как отдельные фабрики, и внутри `animation { ... }`.
+`move` по умолчанию начинает в нуле и использует плавный `SMOOTH`; `easing` принимает Kotlin-лямбду.
+`loop(durationSeconds)` сохраняет обычный циклический сброс, `pingPong` — движение туда-обратно.
+Время callback измеряется в секундах, включая дробные значения.
+
+`animation { add(existingAnimation); custom { seconds -> ... } }` позволяет объединять готовые
+анимации и свои преобразования. В `custom` receiver — `RenderTransform`; доступны `translate`,
+`rotateAround` и `scale`. Для отдельного callback есть `animatedTransform { seconds -> ... }`.
+Оператор `first + second` и операции DSL сохраняют Java-порядок постумножения матриц.
+Построенная анимация не меняется при последующем изменении builder.
+
+Для привязки к каналу вместо самостоятельной модели:
+
+```kotlin
+import space.impact.structures.kotlinx.render.captureChannel
+
+val carriage = definition.captureChannel(
+    channel = "carriage",
+    world = clientWorld,
+    origin = origin,
+    offsetA = offsetA,
+    offsetB = offsetB,
+    offsetC = offsetC,
+).animated(
+    animation = carriageMotion,
+    hideOriginals = true,
+)
+```
+
+Defaults захвата: `piece = "main"`, `facing = ExtendedFacing.DEFAULT`, offsets — ноль,
+`appearance` сохраняет исходные блоки. Для визуальной замены передайте `appearance = { source -> ... }`.
+Незагруженная позиция выбранного канала по-прежнему прерывает захват целиком.
+Координаты, ограничения рендера и жизненный цикл описаны в [Java API рендера](structure-rendering.md).
+
+Управление воспроизведением через `handle.playback` либо отдельный `animationClock(startTick = ...)`:
+
+```kotlin
+import space.impact.structures.kotlinx.animation.pause
+import space.impact.structures.kotlinx.animation.resume
+import space.impact.structures.kotlinx.animation.seekTo
+import space.impact.structures.kotlinx.animation.speed
+
+handle.playback.pause(atTick = tick)
+handle.playback.resume(atTick = tick)
+handle.playback.speed(
+    multiplier = 2.0,
+    atTick = tick,
+)
+handle.playback.seekTo(
+    seconds = 5.0,
+    atTick = tick,
+)
+```
+
+`atTick` — мировое время типа `Double`, при необходимости с partial ticks.
+`showStructureRender` и изменения handle вызываются на основном клиентском потоке.
+Сохраняйте handle у клиентского владельца и вызывайте `close()` при остановке/выгрузке.
+Доступен один JAR; отдельная Kotlin-библиотека для анимаций не требуется.
 
 ## Nullability и кэширование
 

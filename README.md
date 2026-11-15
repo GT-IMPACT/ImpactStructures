@@ -9,15 +9,12 @@
 каналы настройки, ориентации и цветные голограммы. Все 16 цветов подсказок доступны
 независимо от служебных маркеров.
 
-| Модуль | Maven-координаты |
-| --- | --- |
-| Java API | `space.impact:ImpactStructures:<version>` |
-| KotlinX | `space.impact:ImpactStructures-Ktx:<version>` |
+Java API и KotlinX входят в один артефакт: `space.impact:ImpactStructures:<version>`.
 
 Основной класс Java API — `space.impact.structures.ImpactStructures`.
 
-KotlinX добавляет Kotlin DSL и extensions поверх Java API. Версии обоих артефактов
-должны совпадать. [Подключение и примеры](docs/kotlinx.md).
+KotlinX добавляет Kotlin DSL и extensions для структур, рендера и анимаций поверх Java API.
+Kotlin runtime предоставляет зависимость Forgelin 2.1.3. [Подключение и примеры](docs/kotlinx.md).
 
 Сборка: JDK 25, Gradle 9.7.1 через wrapper. Для Minecraft и тестов нужен JDK 8.
 Целевой байткод — Java 8.
@@ -27,8 +24,10 @@ git submodule update --init --recursive
 ./gradlew clean build
 ```
 
-Корневые `build` и `check` охватывают оба проекта. Артефакты сборки:
-`build/libs/` и `kotlinx/build/libs/`.
+Корневые `build` и `check` охватывают библиотеку вместе с KotlinX и example-мод.
+Артефакты сборки: `build/libs/` и `example/build/libs/`.
+`verifyKotlinXConsumer` проверяет Java, KotlinX и анимации из опубликованного в локальный
+тестовый Maven-репозиторий единого JAR, включая dev/reobf-варианты.
 
 Команды: `/istruct_channel` и `/istruct_registry_debug`.
 
