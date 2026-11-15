@@ -106,11 +106,13 @@ val testCompat by tasks.registering(Test::class) {
 }
 
 tasks.named("check") {
+    dependsOn(":ImpactStructures-Example:check")
     dependsOn(":ImpactStructures-Ktx:check")
     dependsOn(testCompat)
 }
 
 tasks.named("build") {
+    dependsOn(":ImpactStructures-Example:build")
     dependsOn(":ImpactStructures-Ktx:build")
 }
 

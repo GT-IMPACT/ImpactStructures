@@ -6,6 +6,11 @@ import com.gtnewhorizon.gtnhmixins.builders.MixinBuilder;
 
 /** Same loader/registry arrangement as Impact-Core, with vanilla/Forge targets in EARLY. */
 public enum Mixins implements IMixins {
+
+    STRUCTURE_RENDER(new MixinBuilder("Animate structure blocks independently of chunk geometry")
+            .setPhase(Phase.EARLY)
+            .addClientMixins("structureRender.MixinRenderBlocks", "structureRender.MixinBlock",
+                    "structureRender.MixinTileEntityRendererDispatcher")),
     BLOCK_CHANGES(new MixinBuilder("Notify structure listeners of block changes")
             .setPhase(Phase.EARLY)
             .addCommonMixins("blockChangeNotifier.MixinForgeHooks", "blockChangeNotifier.MixinWorld")),

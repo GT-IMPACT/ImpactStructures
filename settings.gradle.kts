@@ -18,6 +18,8 @@ rootProject.name = "ImpactStructures"
 
 include(":ImpactStructures-Ktx")
 project(":ImpactStructures-Ktx").projectDir = file("kotlinx")
+include(":ImpactStructures-Example")
+project(":ImpactStructures-Example").projectDir = file("example")
 
 dependencyResolutionManagement {
     versionCatalogs {

@@ -352,6 +352,7 @@ public class ClientProxy extends CommonProxy {
 
     @Override
     public void preInit(FMLPreInitializationEvent e) {
+        space.impact.structures.render.client.StructureRenderer.INSTANCE.install();
         angelicaLoaded = Loader.isModLoaded("angelica");
         FMLCommonHandler.instance().bus().register(new FMLEventHandler());
         MinecraftForge.EVENT_BUS.register(new ForgeEventHandler());

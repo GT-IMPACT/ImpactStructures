@@ -37,6 +37,10 @@ git submodule update --init --recursive
 Эти моды не включаются в JAR, опубликованные зависимости или classpath сервера.
 [Рендер голограмм и проверка производительности](docs/rendering.md).
 
+[Анимируемый 3D-рендер структур](docs/structure-rendering.md): отдельные API геометрии,
+анимации и управления временем, привязка к каналам либо самостоятельные модели.
+Example-мод с космическим лифтом: `./gradlew :ImpactStructures-Example:runClient`.
+
 Опциональные источники материалов для survival-строительства: AE2, WCT,
 AE2FluidCraft, Baubles, Forestry, Backpack и Golden Bag из Extra Utilities. Каждый адаптер включается только при
 наличии своего мода и необходимых API. [Версии, поведение и проверки](docs/integrations.md).
