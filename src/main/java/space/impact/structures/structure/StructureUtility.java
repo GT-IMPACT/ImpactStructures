@@ -46,6 +46,9 @@ import net.minecraft.util.IIcon;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidContainerRegistry;
+import net.minecraftforge.fluids.FluidStack;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -61,6 +64,7 @@ import space.impact.structures.alignment.enumerable.ExtendedFacing;
 import space.impact.structures.structure.IStructureElement.PlaceResult;
 import space.impact.structures.structure.adders.IBlockAdder;
 import space.impact.structures.structure.adders.ITileAdder;
+import space.impact.structures.util.FluidUtility;
 import space.impact.structures.util.ItemStackPredicate;
 import space.impact.structures.util.ItemStackPredicate.NBTMode;
 import space.impact.structures.util.Vec3Impl;
@@ -352,10 +356,27 @@ public class StructureUtility {
      * @param actor   source of action. cannot be null.
      * @param chatter normal error destination. can be null to suppress them.
      */
-    public static PlaceResult survivalPlaceBlock(Block block, int meta, World world, int x, int y, int z, IItemSource s,
-            EntityPlayer actor, Consumer<IChatComponent> chatter) {
-        if (block == null) throw new NullPointerException();
-        if (!ImpactStructures.isBlockTriviallyReplaceable(world, x, y, z, actor)) return PlaceResult.REJECT;
+    public static PlaceResult survivalPlaceBlock(
+            Block block,
+            int meta,
+            World world,
+            int x,
+            int y,
+            int z,
+            IItemSource s,
+            EntityPlayer actor,
+            Consumer<IChatComponent> chatter
+    ) {
+        if (block == null) {
+            throw new NullPointerException();
+        }
+        if (!ImpactStructures.isBlockTriviallyReplaceable(world, x, y, z, actor)) {
+            return PlaceResult.REJECT;
+        }
+        Fluid fluid = FluidUtility.getFluid(block);
+        if (fluid != null) {
+            return survivalPlaceFluid(block, meta, fluid, world, x, y, z, s, actor, chatter);
+        }
         Item itemBlock = Item.getItemFromBlock(block);
         int itemMeta = itemBlock instanceof ISpecialItemBlock
                 ? ((ISpecialItemBlock) itemBlock).getItemMetaFromBlockMeta(block, meta)
@@ -378,6 +399,45 @@ public class StructureUtility {
             world.setBlockToAir(x, y, z);
             return PlaceResult.REJECT;
         }
+        return PlaceResult.ACCEPT;
+    }
+
+    private static PlaceResult survivalPlaceFluid(
+            Block block,
+            int meta,
+            Fluid fluid,
+            World world,
+            int x,
+            int y,
+            int z,
+            IItemSource source,
+            EntityPlayer actor,
+            Consumer<IChatComponent> chatter
+    ) {
+        FluidStack request = new FluidStack(fluid, FluidContainerRegistry.BUCKET_VOLUME);
+        Consumer<ItemStack> returnContainer = stack -> {
+            if (!actor.inventory.addItemStackToInventory(stack)) {
+                actor.dropPlayerItemWithRandomChoice(stack, false);
+            }
+        };
+        if (!FluidUtility.takeFluid(source, request, true, returnContainer)) {
+            if (chatter != null) {
+                chatter.accept(new ChatComponentTranslation(
+                        "impactapi.autoplace.missing_block", fluid.getLocalizedName(request)));
+            }
+            return PlaceResult.REJECT;
+        }
+        Block previousBlock = world.getBlock(x, y, z);
+        int previousMeta = world.getBlockMetadata(x, y, z);
+        if (!world.setBlock(x, y, z, block, meta, 2)) {
+            return PlaceResult.REJECT;
+        }
+        if (!FluidUtility.takeFluid(source, request, false, returnContainer)) {
+            world.setBlock(x, y, z, previousBlock, previousMeta, 2);
+            return PlaceResult.REJECT;
+        }
+        world.notifyBlockChange(x, y, z, block);
+        actor.inventoryContainer.detectAndSendChanges();
         return PlaceResult.ACCEPT;
     }
 
@@ -1491,8 +1551,22 @@ public class StructureUtility {
             return new IStructureElement<T>() {
 
                 @Override
-                public PlaceResult survivalPlaceBlock(T t, World world, int x, int y, int z, ItemStack trigger,
-                        AutoPlaceEnvironment env) {
+                public PlaceResult survivalPlaceBlock(
+                        T t,
+                        World world,
+                        int x,
+                        int y,
+                        int z,
+                        ItemStack trigger,
+                        AutoPlaceEnvironment env
+                ) {
+                    if (FluidUtility.getFluid(block) != null) {
+                        if (check(t, world, x, y, z)) {
+                            return PlaceResult.SKIP;
+                        }
+                        return StructureUtility.survivalPlaceBlock(
+                                block, meta, world, x, y, z, env.getSource(), env.getActor(), env.getChatter());
+                    }
                     BlocksToPlace e = getBlocksToPlace(t, world, x, y, z, trigger, env);
                     IItemSource source = env.getSource();
                     EntityPlayer actor = env.getActor();
@@ -1630,6 +1704,27 @@ public class StructureUtility {
             };
         } else {
             return new IStructureElement<T>() {
+
+                @Override
+                public PlaceResult survivalPlaceBlock(
+                        T t,
+                        World world,
+                        int x,
+                        int y,
+                        int z,
+                        ItemStack trigger,
+                        AutoPlaceEnvironment env
+                ) {
+                    if (FluidUtility.getFluid(defaultBlock) == null) {
+                        return IStructureElement.super.survivalPlaceBlock(t, world, x, y, z, trigger, env);
+                    }
+                    if (check(t, world, x, y, z)) {
+                        return PlaceResult.SKIP;
+                    }
+                    return StructureUtility.survivalPlaceBlock(
+                            defaultBlock, defaultMeta, world, x, y, z,
+                            env.getSource(), env.getActor(), env.getChatter());
+                }
 
                 @Override
                 public boolean check(T t, World world, int x, int y, int z) {

@@ -4,6 +4,7 @@ import java.util.function.Predicate;
 
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import appeng.api.AEApi;
 import appeng.api.config.Actionable;
@@ -12,6 +13,7 @@ import appeng.api.networking.energy.IEnergySource;
 import appeng.api.networking.security.PlayerSource;
 import appeng.api.storage.IMEInventory;
 import appeng.api.storage.IStorageHelper;
+import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.api.storage.data.IItemList;
 import appeng.util.Platform;
@@ -19,7 +21,18 @@ import space.impact.structures.util.InventoryUtility.ItemStackCounter;
 import space.impact.structures.util.InventoryUtility.ItemStackExtractor;
 
 abstract class MeExtractor implements ItemStackExtractor {
+
     abstract Session connect(ItemStack source, EntityPlayerMP player);
+
+    @Override
+    public final boolean takeFluid(ItemStack source, FluidStack fluid, boolean simulate, EntityPlayerMP player) {
+        if (fluid == null || fluid.amount <= 0 || player == null || !isValidSource(source, player)) {
+            return false;
+        }
+        Session session = connect(simulate ? source.copy() : source, player);
+        return session != null && session.takeFluid(
+                fluid, simulate, new PlayerSource(player, null), AEApi.instance().storage());
+    }
 
     @Override
     public boolean isAPIImplemented(APIType type) {
@@ -38,14 +51,52 @@ abstract class MeExtractor implements ItemStackExtractor {
     }
 
     static final class Session {
+
         private final IMEInventory<IAEItemStack> inventory;
+        private final IMEInventory<IAEFluidStack> fluids;
         private final IEnergySource energy;
         private final Predicate<IAEItemStack> visible;
 
         Session(IMEInventory<IAEItemStack> inventory, IEnergySource energy, Predicate<IAEItemStack> visible) {
+            this(inventory, null, energy, visible);
+        }
+
+        Session(
+                IMEInventory<IAEItemStack> inventory,
+                IMEInventory<IAEFluidStack> fluids,
+                IEnergySource energy,
+                Predicate<IAEItemStack> visible
+        ) {
             this.inventory = inventory;
+            this.fluids = fluids;
             this.energy = energy;
             this.visible = visible;
+        }
+
+        boolean takeFluid(FluidStack fluid, boolean simulate, PlayerSource actor, IStorageHelper helper) {
+            if (fluids == null || fluid == null || fluid.amount <= 0) {
+                return false;
+            }
+            IAEFluidStack request = helper.createFluidStack(fluid.copy());
+            if (request == null) {
+                return false;
+            }
+            IAEFluidStack available = Platform.poweredExtraction(energy, fluids, request, actor, Actionable.SIMULATE);
+            if (available == null || available.getStackSize() != fluid.amount) {
+                return false;
+            }
+            if (simulate) {
+                return true;
+            }
+            IAEFluidStack extracted = Platform.poweredExtraction(energy, fluids, request, actor, Actionable.MODULATE);
+            if (extracted != null && extracted.getStackSize() == fluid.amount) {
+                return true;
+            }
+            // A storage provider may change between simulation and extraction.
+            if (extracted != null) {
+                fluids.injectItems(extracted, Actionable.MODULATE, actor);
+            }
+            return false;
         }
 
         int take(Predicate<ItemStack> predicate, ItemStack filter, boolean simulate, int count,

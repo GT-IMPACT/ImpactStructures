@@ -8,6 +8,7 @@ import javax.annotation.Nonnull;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import space.impact.structures.util.InventoryIterable;
 import space.impact.structures.util.InventoryUtility;
@@ -32,6 +33,15 @@ public interface IItemSource {
      */
     @Nonnull
     Map<ItemStack, Integer> take(Predicate<ItemStack> predicate, boolean simulate, int count);
+
+    /**
+     * Take the exact amount of fluid from bulk storage, without containers.
+     * Returns false without extracting when the full amount is unavailable.
+     * Item-only sources remain compatible and can still supply filled containers.
+     */
+    default boolean takeFluid(FluidStack fluid, boolean simulate) {
+        return false;
+    }
 
     /**
      * Take exactly one item that matches the predicate.
@@ -119,6 +129,11 @@ public interface IItemSource {
      */
     static IItemSource fromPlayer(EntityPlayerMP player) {
         return new IItemSource() {
+
+            @Override
+            public boolean takeFluid(FluidStack fluid, boolean simulate) {
+                return InventoryUtility.takeFluidFromInventory(player, fluid, simulate);
+            }
 
             @Nonnull
             @Override

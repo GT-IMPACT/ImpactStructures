@@ -16,6 +16,7 @@ import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.InventoryEnderChest;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import space.impact.structures.SortedRegistry;
 import space.impact.structures.util.InventoryUtility.ItemStackExtractor.APIType;
@@ -268,6 +269,52 @@ public class InventoryUtility {
         // dummy method to init static final fields
     }
 
+    public static boolean takeFluidFromInventory(EntityPlayerMP player, FluidStack fluid, boolean simulate) {
+        if (fluid == null || fluid.amount <= 0) {
+            throw new IllegalArgumentException("Fluid request must have a positive amount");
+        }
+        try (ExtractionScope ignored = ExtractionScope.open()) {
+            for (InventoryProvider<?> provider : inventoryProviders.getPlayerOrdering(player)) {
+                if (takeFluidFromPlayer(player, fluid, simulate, provider)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static <R extends Iterable<ItemStack>> boolean takeFluidFromPlayer(
+            EntityPlayerMP player,
+            FluidStack fluid,
+            boolean simulate,
+            InventoryProvider<R> provider
+    ) {
+        R inventory = provider.getInventory(player);
+        if (inventory == null) {
+            return false;
+        }
+        for (ItemStack stack : inventory) {
+            if (stack == null || stack.getItem() == null || stack.stackSize <= 0) {
+                continue;
+            }
+            for (ItemStackExtractor extractor : stackExtractors.getPlayerOrdering(player)) {
+                if (!extractor.isValidSource(stack, player)) {
+                    continue;
+                }
+                if (extractor.takeFluid(stack, fluid.copy(), simulate, player)) {
+                    if (!simulate) {
+                        provider.markDirty(inventory);
+                    }
+                    return true;
+                }
+                if (extractor.isAPIImplemented(APIType.IS_VALID_SOURCE)) {
+                    break;
+                }
+            }
+        }
+        return false;
+    }
+
     public interface OptimizedExtractor {
 
         /**
@@ -293,6 +340,11 @@ public class InventoryUtility {
     }
 
     public interface ItemStackExtractor {
+
+        /** Extract the entire fluid request, or leave storage unchanged if it is unavailable. */
+        default boolean takeFluid(ItemStack source, FluidStack fluid, boolean simulate, EntityPlayerMP player) {
+            return false;
+        }
 
         enum APIType {
             MAIN,

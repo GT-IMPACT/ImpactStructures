@@ -10,6 +10,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.IChatComponent;
+import net.minecraftforge.fluids.FluidStack;
 
 import space.impact.structures.alignment.enumerable.ExtendedFacing;
 
@@ -178,6 +179,11 @@ public class AutoPlaceEnvironment {
         public WrappedIItemSource(AutoPlaceEnvironment container, IItemSource delegate) {
             this.container = container;
             this.delegate = delegate;
+        }
+
+        @Override
+        public boolean takeFluid(FluidStack fluid, boolean simulate) {
+            return delegate.takeFluid(fluid, simulate);
         }
 
         @Override

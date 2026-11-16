@@ -59,7 +59,7 @@ abstract class WirelessExtractor extends MeExtractor {
         ItemStack[] contents = new ItemStack[cells.getSizeInventory()];
         for (int i = 0; i < contents.length; i++) contents[i] = cells.getStackInSlot(i);
         IPartitionList<IAEItemStack> filter = ItemViewCell.createFilter(contents);
-        return new Session(storage.getItemInventory(), energy,
+        return new Session(storage.getItemInventory(), storage.getFluidInventory(), energy,
                 item -> filter == null || filter.isEmpty() || filter.isListed(item));
     }
 
